@@ -1,0 +1,30 @@
+[package]
+name = "ksp"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+description = """
+A test suite for comparing different K-Shortest Path (KSP) algorithms.
+"""
+
+
+[dependencies]
+arrayvec = { version = "0.7", features = ["serde"] }
+
+
+[features]
+all = ["vanilla", "peek"]
+
+vanilla = []
+peek = []
+
+
+[workspace.package]
+edition = "2021"
+repository = "https://github.com/Lut99/k-shortest-paths"
+
+
+[workspace]
+members = [
+    "ksp-bench"
+]
