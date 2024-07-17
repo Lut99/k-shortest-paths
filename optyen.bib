@@ -1,0 +1,17 @@
+@inproceedings{10.1145/3225058.3225075,
+author = {Ajwani, Deepak and Duriakova, Erika and Hurley, Neil and Meyer, Ulrich and Schickedanz, Alexander},
+title = {An Empirical Comparison of k-Shortest Simple Path Algorithms on Multicores},
+year = {2018},
+isbn = {9781450365109},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3225058.3225075},
+doi = {10.1145/3225058.3225075},
+abstract = {We consider the loop less k-shortest path (KSP) problem. Although this problem has been studied in the sequential setting for at least the last two decades, no good parallel implementations are known. In this paper, we provide (i) a first systematic empirical comparison of various KSP algorithms and heuristic optimisations, (ii) carefully engineer various parallel implementations of these sequential algorithms and (iii) perform an extensive study of these parallel implementations on a range of graph classes and multicore architectures to determine the best algorithm and parallelization strategy for different graph classes.We find that even though the worst-case complexity of the best undirected KSP algorithm O(k(m + n log n)) is significantly better than that of the popular and considerably simpler directed KSP algorithm O(kn(m + n log n)), the two algorithms are fairly competitive in terms of their empirical performance on small diameter graphs. Furthermore, we show that a few simple optimisations help to bridge the gap between these KSP algorithms even more. However, on moderate to large diameter graphs, the undirected KSP algorithm is considerably faster than the directed algorithms, both in sequential and parallel settings. In terms of the parallelisation strategy, simply replacing the shortest path subroutine by parallel Δ-stepping algorithm can provide a good speed-up for many KSP algorithms on random graphs. In contrast, for graphs with skewed degree distribution, a more complex strategy of parallelizing the different deviations and then parallelizing the shortest path computation inside the deviations with the remaining threads, provides a better performance.},
+booktitle = {Proceedings of the 47th International Conference on Parallel Processing},
+articleno = {78},
+numpages = {12},
+keywords = {Algorithm Engineering, Parallel Graph Algorithms, Parallel Single Source Shortest Path, Parallel k-Shortest Path},
+location = {Eugene, OR, USA},
+series = {ICPP '18}
+}

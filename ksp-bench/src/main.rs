@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    16 Jul 2024, 20:39:03
+//    18 Jul 2024, 00:13:55
 //  Auto updated?
 //    Yes
 //
@@ -37,10 +37,6 @@ struct Arguments {
     /// Whether to run with maximum log statements.
     #[clap(long, global = true, help = "If given, shows TRACE-level log statements. Implies '--debug'.")]
     trace: bool,
-
-    /// The algorithm to benchmark.
-    #[clap(name = "ALGORITHMS", help = "The algorithms to benchmark. Give multiple for side-by-side comparisons.")]
-    algorithms: Vec<Algorithm>,
 
     /// Any specific benchmarks to run.
     #[clap(
@@ -161,17 +157,88 @@ fn main() {
             debug!("Benchmarking for test '{}' ({}/{})...", test.id, i + 1, tests.len());
 
             // Benchmark the test
-            for alg in &args.algorithms {
-                match alg {
-                    Algorithm::Vanilla => {
+            let mut min_cost: Vec<Option<f64>> = vec![None; test.k];
+            for alg in Algorithm::all() {
+                let paths: Vec<Path> = match alg {
+                    #[cfg(feature = "peek")]
+                    Algorithm::Peek => {
                         // Run the test and time it
                         let start = Instant::now();
-                        let _paths: Vec<Path> = ksp::vanilla::VanillaKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
+                        let paths: Vec<Path> = ksp::peek::PeekKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
                         let time = start.elapsed();
 
                         // Store that
-                        results.entry(&test.id).or_default().insert(Algorithm::Vanilla, time);
+                        results.entry(&test.id).or_default().insert(Algorithm::Peek, time);
+                        paths
                     },
+                    #[cfg(feature = "wikipedia")]
+                    Algorithm::Wikipedia => {
+                        // Run the test and time it
+                        let start = Instant::now();
+                        let paths: Vec<Path> = ksp::wikipedia::WikipediaKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
+                        let time = start.elapsed();
+
+                        // Store that
+                        results.entry(&test.id).or_default().insert(Algorithm::Wikipedia, time);
+                        paths
+                    },
+                    #[cfg(feature = "yen")]
+                    Algorithm::Yen => {
+                        // Run the test and time it
+                        let start = Instant::now();
+                        let paths: Vec<Path> = ksp::yen::YenKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
+                        let time = start.elapsed();
+
+                        // Store that
+                        results.entry(&test.id).or_default().insert(Algorithm::Yen, time);
+                        paths
+                    },
+                    #[cfg(not(any(feature = "peek", feature = "wikipedia", feature = "yen")))]
+                    _ => unreachable!(),
+                };
+
+                // Verify correctness of the paths
+                for (i, path) in paths.into_iter().enumerate() {
+                    // Ensure all entries are connected
+                    'hops: for i in 1..path.hops.len() {
+                        let n1: &str = path.hops[i - 1].0;
+                        let n2: &str = path.hops[i].0;
+                        for edge in graph.edges.values() {
+                            if (edge.left.as_str() == n1 && edge.right.as_str() == n2) || (edge.left.as_str() == n2 && edge.right.as_str() == n1) {
+                                continue 'hops;
+                            }
+                        }
+                        panic!("Benchmark '{}' failed for {:?}: not all paths are connected\n\nPath: {:?}", test.id, alg, path);
+                    }
+
+                    // Ensure the path connects the test's endpoints
+                    if path.hops.first().unwrap().0 != test.source.as_str() {
+                        panic!(
+                            "Benchmark '{}' failed for {:?}: path doesn't start at test source ({})\n\nPath: {:?}",
+                            test.id, alg, test.source, path
+                        );
+                    }
+                    if path.hops.last().unwrap().0 != test.target.as_str() {
+                        panic!(
+                            "Benchmark '{}' failed for {:?}: path doesn't start at test target ({})\n\nPath: {:?}",
+                            test.id, alg, test.target, path
+                        );
+                    }
+
+                    // Check whether the test agrees with the minimum
+                    if let Some(prev) = min_cost[i] {
+                        if path.cost() != prev {
+                            panic!(
+                                "Benchmark '{}' failed for {:?}: path not shortest (got {}, previous alg got {})",
+                                test.id,
+                                alg,
+                                path.cost(),
+                                prev
+                            );
+                        }
+                    } else {
+                        min_cost[i] = Some(path.cost());
+                    }
                 }
             }
         }
@@ -182,13 +249,13 @@ fn main() {
             table.set_header(
                 ["Benchmark".to_string(), "Executed test".to_string()]
                     .into_iter()
-                    .chain(results.values().next().into_iter().flat_map(|t| t.keys().map(|a| format!("{a:?} duration (ms)")))),
+                    .chain(Algorithm::all().into_iter().map(|a| format!("{a:?} duration (ms)"))),
             );
             for (test, times) in results {
                 table.add_row(
                     [name.to_string(), test.to_string()]
                         .into_iter()
-                        .chain(times.into_values().map(|t| ((t.as_nanos() as f64) / 1000000.0).to_string())),
+                        .chain(Algorithm::all().into_iter().map(|a| ((times.get(a).unwrap().as_nanos() as f64) / 1000000.0).to_string())),
                 );
             }
             println!("{table}");

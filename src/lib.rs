@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:06:19
 //  Last edited:
-//    16 Jul 2024, 20:41:44
+//    17 Jul 2024, 22:50:34
 //  Auto updated?
 //    Yes
 //
@@ -18,8 +18,10 @@ pub mod graph;
 pub mod path;
 #[cfg(feature = "peek")]
 pub mod peek;
-#[cfg(feature = "vanilla")]
-pub mod vanilla;
+#[cfg(feature = "wikipedia")]
+pub mod wikipedia;
+#[cfg(feature = "yen")]
+pub mod yen;
 
 // Imports
 use std::error::Error;
@@ -52,9 +54,32 @@ impl Error for UnknownAlgorithmError {}
 /// Overview of all algorithms in the libary.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Algorithm {
-    /// The default, simplest version of a KSP-algorithm.
-    #[cfg(feature = "vanilla")]
-    Vanilla,
+    /// The optimised version as presented by the `PeeK`-paper [1].
+    #[cfg(feature = "peek")]
+    Peek,
+    /// The default, simplest version of a KSP-algorithm as presented by Wikipedia.
+    #[cfg(feature = "wikipedia")]
+    Wikipedia,
+    /// The default, simplest version of a KSP-algorithm as presented by the `PeeK`-paper [1].
+    #[cfg(feature = "yen")]
+    Yen,
+}
+impl Algorithm {
+    /// Returns all implemented algorithms.
+    ///
+    /// # Returns
+    /// A static list of the implemented algorithms.
+    #[inline]
+    pub const fn all() -> &'static [Self] {
+        &[
+            #[cfg(feature = "peek")]
+            Self::Peek,
+            #[cfg(feature = "wikipedia")]
+            Self::Wikipedia,
+            #[cfg(feature = "yen")]
+            Self::Yen,
+        ]
+    }
 }
 impl FromStr for Algorithm {
     type Err = UnknownAlgorithmError;
@@ -62,7 +87,12 @@ impl FromStr for Algorithm {
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "vanilla" => Ok(Self::Vanilla),
+            #[cfg(feature = "peek")]
+            "peek" => Ok(Self::Peek),
+            #[cfg(feature = "wikipedia")]
+            "wikipedia" => Ok(Self::Wikipedia),
+            #[cfg(feature = "yen")]
+            "yen" => Ok(Self::Yen),
             other => Err(UnknownAlgorithmError { unknown: other.into() }),
         }
     }

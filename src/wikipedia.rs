@@ -4,12 +4,12 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    16 Jul 2024, 02:34:41
+//    17 Jul 2024, 23:56:29
 //  Auto updated?
 //    Yes
 //
 //  Description:
-//!   Implements the simplest KSP algorithm.
+//!   Implements the simplest KSP algorithm as presented by Wikipedia.
 //!   
 //!   Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 //
@@ -28,8 +28,8 @@ use crate::Routing;
 ///
 /// Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 #[derive(Clone, Copy, Debug)]
-pub struct VanillaKSP;
-impl Routing for VanillaKSP {
+pub struct WikipediaKSP;
+impl Routing for WikipediaKSP {
     #[track_caller]
     fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
         // Assert that both nodes exists
@@ -45,7 +45,7 @@ impl Routing for VanillaKSP {
         // Then do the algorithm
         let mut shortest: Vec<Path<'g>> = Vec::with_capacity(k);
         let mut shortest_to: HashMap<&str, usize> = HashMap::with_capacity(graph.nodes.len());
-        let mut todo: Vec<Path<'g>> = vec![Path { hops: vec![src], cost: 0.0 }];
+        let mut todo: Vec<Path<'g>> = vec![Path { hops: vec![(src, 0.0)] }];
         while !todo.is_empty() && *shortest_to.entry(dst).or_default() < k {
             let path: Path<'g> = todo.pop().unwrap();
             let end: &str = path.end().unwrap();
@@ -61,17 +61,17 @@ impl Routing for VanillaKSP {
             if *shortest_to.get(end).unwrap() <= k {
                 for e in graph.edges.values() {
                     // Find the next hope to take _if_ this is the correct edge
-                    let mut hops: Vec<&'g str> = path.hops.clone();
+                    let mut hops: Vec<(&'g str, f64)> = path.hops.clone();
                     if e.left.as_str() == end && e.right.as_str() != end {
-                        hops.push(e.right.as_str());
+                        hops.push((e.right.as_str(), path.cost() + e.cost));
                     } else if e.left.as_str() != end && e.right.as_str() == end {
-                        hops.push(e.left.as_str());
+                        hops.push((e.left.as_str(), path.cost() + e.cost));
                     } else {
                         continue;
                     }
 
                     // Add it
-                    todo.push(Path { hops, cost: path.cost + e.cost })
+                    todo.push(Path { hops })
                 }
             }
         }

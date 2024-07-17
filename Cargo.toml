@@ -13,10 +13,11 @@ arrayvec = { version = "0.7", features = ["serde"] }
 
 
 [features]
-all = ["vanilla", "peek"]
+all = ["peek", "wikipedia", "yen"]
 
-vanilla = []
 peek = []
+wikipedia = []
+yen = []
 
 
 [workspace.package]
