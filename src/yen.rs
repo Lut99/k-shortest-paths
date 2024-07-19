@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    19 Jul 2024, 23:47:15
+//    20 Jul 2024, 01:54:36
 //  Auto updated?
 //    Yes
 //
@@ -27,53 +27,34 @@ use crate::Routing;
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
-    use ksp_graph::{Edge, Node};
-
     use super::*;
+    use crate::path;
+    use crate::utils::load_graph;
 
     #[test]
     fn test_sssp() {
-        let g = Graph {
-            nodes: HashMap::from([
-                (ArrayString::from("Amsterdam").unwrap(), Node { id: ArrayString::from("Amsterdam").unwrap(), pos: (52.3673, 4.9041) }),
-                (ArrayString::from("Berlin").unwrap(), Node { id: ArrayString::from("Berlin").unwrap(), pos: (52.5200, 13.4050) }),
-                (ArrayString::from("Chicago").unwrap(), Node { id: ArrayString::from("Chicago").unwrap(), pos: (41.8781, 87.6298) }),
-                (ArrayString::from("Dorchester").unwrap(), Node { id: ArrayString::from("Dorchester").unwrap(), pos: (50.7112, 2.4412) }),
-                (ArrayString::from("Edinburgh").unwrap(), Node { id: ArrayString::from("Edinburgh").unwrap(), pos: (55.9533, 3.1883) }),
-            ]),
-            edges: HashMap::from([
-                (ArrayString::from("Amsterdam-Berlin").unwrap(), Edge {
-                    id:    ArrayString::from("Amsterdam-Berlin").unwrap(),
-                    left:  ArrayString::from("Amsterdam").unwrap(),
-                    right: ArrayString::from("Berlin").unwrap(),
-                    cost:  577.34,
-                }),
-                (ArrayString::from("Amsterdam-Dorchester").unwrap(), Edge {
-                    id:    ArrayString::from("Amsterdam-Dorchester").unwrap(),
-                    left:  ArrayString::from("Amsterdam").unwrap(),
-                    right: ArrayString::from("Dorchester").unwrap(),
-                    cost:  540.86,
-                }),
-                (ArrayString::from("Amsterdam-Edinburgh").unwrap(), Edge {
-                    id:    ArrayString::from("Amsterdam-Edinburgh").unwrap(),
-                    left:  ArrayString::from("Amsterdam").unwrap(),
-                    right: ArrayString::from("Edinburgh").unwrap(),
-                    cost:  660.68,
-                }),
-                (ArrayString::from("Dorchester-Edinburgh").unwrap(), Edge {
-                    id:    ArrayString::from("Dorchester-Edinburgh").unwrap(),
-                    left:  ArrayString::from("Dorchester").unwrap(),
-                    right: ArrayString::from("Edinburgh").unwrap(),
-                    cost:  589.23,
-                }),
-                (ArrayString::from("Chicago-Dorchester").unwrap(), Edge {
-                    id:    ArrayString::from("Chicago-Dorchester").unwrap(),
-                    left:  ArrayString::from("Chicago").unwrap(),
-                    right: ArrayString::from("Dorchester").unwrap(),
-                    cost:  6249.15,
-                }),
-            ]),
-        };
+        // Run it quite some times to catch hashmap problems
+        for _ in 0..10 {
+            let g: Graph = load_graph("cities");
+            assert_eq!(sssp(&g, "Amsterdam", "Berlin"), path!(crate : g, "Amsterdam" -| "Berlin"));
+            assert_eq!(sssp(&g, "Amsterdam", "Dorchester"), path!(crate : g, "Amsterdam" -| "Dorchester"));
+            assert_eq!(sssp(&g, "Amsterdam", "Chicago"), path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago"));
+            assert_eq!(sssp(&g, "Berlin", "Chicago"), path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago"));
+        }
+    }
+
+    #[test]
+    fn test_yen_ksp() {
+        // Run it quite some times to catch hashmap problems
+        for _ in 0..10 {
+            let g: Graph = load_graph("cities");
+            assert_eq!(YenKSP.k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
+            assert_eq!(YenKSP.k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
+            assert_eq!(YenKSP.k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")]);
+            assert_eq!(YenKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
+                path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
+            ]);
+        }
     }
 }
 

@@ -653,6 +653,7 @@ name = "ksp"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
+ "error-trace",
  "ksp-graph",
  "serde",
 ]

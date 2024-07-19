@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    19 Jul 2024, 23:47:06
+//    20 Jul 2024, 01:54:41
 //  Auto updated?
 //    Yes
 //
@@ -21,6 +21,34 @@ use ksp_graph::Graph;
 
 use crate::path::Path;
 use crate::Routing;
+
+
+/***** TESTS *****/
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::path;
+    use crate::utils::load_graph;
+
+    #[test]
+    fn test_wikipedia_ksp() {
+        // Run it quite some times to catch hashmap problems
+        for _ in 0..10 {
+            let g: Graph = load_graph("cities");
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
+                path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")
+            ]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
+                path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
+            ]);
+        }
+    }
+}
+
+
+
 
 
 /***** LIBRARY *****/

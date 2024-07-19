@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:06:19
 //  Last edited:
-//    19 Jul 2024, 23:46:53
+//    20 Jul 2024, 01:06:17
 //  Auto updated?
 //    Yes
 //
@@ -17,6 +17,8 @@
 pub mod path;
 #[cfg(feature = "peek")]
 pub mod peek;
+#[cfg(test)]
+pub mod utils;
 #[cfg(feature = "wikipedia")]
 pub mod wikipedia;
 #[cfg(feature = "yen")]

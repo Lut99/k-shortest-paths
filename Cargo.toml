@@ -15,6 +15,11 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 ksp-graph = { path = "./ksp-graph" }
 
 
+[dev-dependencies]
+error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
+ksp-graph = { path = "./ksp-graph", features = ["json"] }
+
+
 [features]
 all = ["peek", "wikipedia", "yen"]
 
