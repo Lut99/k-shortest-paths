@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 20:42:17
 //  Last edited:
-//    19 Jul 2024, 00:47:02
+//    19 Jul 2024, 23:47:00
 //  Auto updated?
 //    Yes
 //
@@ -18,7 +18,8 @@
 //!       https://doi.ieeecomputersociety.org/10.1145/3581784.3607110
 //
 
-use crate::graph::Graph;
+use ksp_graph::Graph;
+
 use crate::path::Path;
 use crate::Routing;
 

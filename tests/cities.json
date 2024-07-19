@@ -1,0 +1,56 @@
+{
+    "nodes": {
+        "Amsterdam": {
+            "id": "Amsterdam",
+            "pos": [52.3673, 4.9041]
+        },
+        "Berlin": {
+            "id": "Berlin",
+            "pos": [52.5200, 13.4050]
+        },
+        "Chicago": {
+            "id": "Chicago",
+            "pos": [41.8781, 87.6298]
+        },
+        "Dorchester": {
+            "id": "Dorchester",
+            "pos":[50.7112, 2.4412]
+        },
+        "Edinburgh": {
+            "id": "Edinburgh",
+            "pos": [55.9533, 3.1883]
+        }
+    },
+    "edges": {
+        "Amsterdam-Berlin": {
+            "id":    "Amsterdam-Berlin",
+            "left":  "Amsterdam",
+            "right": "Berlin",
+            "cost":  577.34
+        },
+        "Amsterdam-Dorchester": {
+            "id":    "Amsterdam-Dorchester",
+            "left":  "Amsterdam",
+            "right": "Dorchester",
+            "cost":  540.86
+        },
+        "Amsterdam-Edinburgh": {
+            "id":    "Amsterdam-Edinburgh",
+            "left":  "Amsterdam",
+            "right": "Edinburgh",
+            "cost":  660.68
+        },
+        "Dorchester-Edinburgh": {
+            "id":    "Dorchester-Edinburgh",
+            "left":  "Dorchester",
+            "right": "Edinburgh",
+            "cost":  589.23
+        },
+        "Chicago-Dorchester": {
+            "id":    "Chicago-Dorchester",
+            "left":  "Chicago",
+            "right": "Dorchester",
+            "cost":  6249.15
+        }
+    }
+}

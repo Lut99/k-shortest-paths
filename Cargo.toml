@@ -9,7 +9,10 @@ A test suite for comparing different K-Shortest Path (KSP) algorithms.
 
 
 [dependencies]
-arrayvec = { version = "0.7", features = ["serde"] }
+arrayvec = "0.7"
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+ksp-graph = { path = "./ksp-graph" }
 
 
 [features]
@@ -28,5 +31,6 @@ repository = "https://github.com/Lut99/k-shortest-paths"
 [workspace]
 members = [
     "ksp-bench",
+    "ksp-graph",
     "ksp-vis"
 ]

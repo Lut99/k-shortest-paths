@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    19 Jul 2024, 01:27:07
+//    19 Jul 2024, 23:47:15
 //  Auto updated?
 //    Yes
 //
@@ -18,8 +18,8 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use arrayvec::ArrayString;
+use ksp_graph::Graph;
 
-use crate::graph::Graph;
 use crate::path::Path;
 use crate::Routing;
 
@@ -27,8 +27,9 @@ use crate::Routing;
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
+    use ksp_graph::{Edge, Node};
+
     use super::*;
-    use crate::graph::{Edge, Node};
 
     #[test]
     fn test_sssp() {

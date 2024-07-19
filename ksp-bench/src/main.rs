@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    18 Jul 2024, 00:13:55
+//    19 Jul 2024, 23:53:09
 //  Auto updated?
 //    Yes
 //
@@ -21,10 +21,10 @@ use clap::Parser;
 use comfy_table::Table;
 use error_trace::trace;
 use humanlog::{DebugMode, HumanLogger};
-use ksp::graph::Graph;
 use ksp::{Algorithm, Path, Routing};
 use ksp_bench::parser::{self};
 use ksp_bench::tests::TestCase;
+use ksp_graph::Graph;
 use log::{debug, error, info, warn};
 
 
@@ -132,8 +132,15 @@ fn main() {
     debug!("Running {} benchmark(s)", files.len());
     let mut first: bool = true;
     for (name, file) in files {
-        // Open the file
-        let (mut graph, tests): (Graph, Vec<TestCase>) = match parser::parse_sndlib_xml(&file) {
+        // Open the file and parse the graph & test case
+        let mut graph: Graph = match ksp_graph::sndlib_xml::parse(&file) {
+            Ok(res) => res,
+            Err(err) => {
+                error!("{}", trace!(("Failed to load benchmark '{name}'"), err));
+                std::process::exit(1);
+            },
+        };
+        let tests: Vec<TestCase> = match crate::parser::parse_tests(&file) {
             Ok(res) => res,
             Err(err) => {
                 error!("{}", trace!(("Failed to load benchmark '{name}'"), err));

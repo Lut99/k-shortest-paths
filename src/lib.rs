@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:06:19
 //  Last edited:
-//    17 Jul 2024, 22:50:34
+//    19 Jul 2024, 23:46:53
 //  Auto updated?
 //    Yes
 //
@@ -14,7 +14,6 @@
 //
 
 // Declare modules
-pub mod graph;
 pub mod path;
 #[cfg(feature = "peek")]
 pub mod peek;
@@ -28,8 +27,8 @@ use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::str::FromStr;
 
+use ksp_graph::Graph;
 // Use some of it in this namespace
-pub use graph::*;
 pub use path::*;
 
 
@@ -115,5 +114,5 @@ pub trait Routing {
     ///
     /// # Panics
     /// This function is allowed to panic if the given `src` or `dst` are not in the given `graph`.
-    fn k_shortest_paths<'g>(&mut self, graph: &'g graph::Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>>;
+    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>>;
 }

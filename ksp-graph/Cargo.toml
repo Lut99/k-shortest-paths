@@ -1,0 +1,22 @@
+[package]
+name = "ksp-graph"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+description = "Defines the generalized graph representation and several parsers to create it."
+
+
+[dependencies]
+arrayvec = { version = "0.7", features = ["serde"] }
+quick-xml = { version = "0.36", features = ["serialize"], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+
+[features]
+default = []
+
+json = ["serde", "dep:serde_json"]
+sndlib_xml = ["serde", "dep:quick-xml"]
+
+serde = ["dep:serde", "arrayvec/serde"]

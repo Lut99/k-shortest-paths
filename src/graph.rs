@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:21:34
 //  Last edited:
-//    19 Jul 2024, 01:01:52
+//    19 Jul 2024, 23:24:27
 //  Auto updated?
 //    Yes
 //
@@ -15,11 +15,14 @@
 use std::collections::HashMap;
 
 use arrayvec::ArrayString;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 
 /***** LIBRARY *****/
 /// Defines a graph of nodes linked by edges.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Graph {
     /// The nodes in the graph.
     pub nodes: HashMap<ArrayString<64>, Node>,
@@ -29,6 +32,7 @@ pub struct Graph {
 
 /// Defines a node in each graph.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Node {
     /// The identifier of the node.
     pub id:  ArrayString<64>,
@@ -38,6 +42,7 @@ pub struct Node {
 
 /// Defines a link between nodes in each graph.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Edge {
     /// The identifier of the edge.
     pub id:    ArrayString<64>,

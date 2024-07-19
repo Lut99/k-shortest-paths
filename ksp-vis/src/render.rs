@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    19 Jul 2024, 02:42:10
+//    19 Jul 2024, 23:53:31
 //  Auto updated?
 //    Yes
 //
@@ -13,7 +13,7 @@
 //
 
 use image::{Rgba, RgbaImage};
-use ksp::Graph;
+use ksp_graph::Graph;
 
 
 /***** HELPER FUNCTIONS *****/

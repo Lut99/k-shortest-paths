@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    17 Jul 2024, 23:56:29
+//    19 Jul 2024, 23:47:06
 //  Auto updated?
 //    Yes
 //
@@ -17,8 +17,8 @@
 use std::collections::HashMap;
 
 use arrayvec::ArrayString;
+use ksp_graph::Graph;
 
-use crate::graph::Graph;
 use crate::path::Path;
 use crate::Routing;
 

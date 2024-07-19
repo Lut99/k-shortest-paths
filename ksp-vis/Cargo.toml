@@ -22,4 +22,4 @@ image = { version = "0.25", features = [] }
 log = "0.4"
 
 ksp = { path = "../" }
-ksp-bench = { path = "../ksp-bench" }
+ksp-graph = { path = "../ksp-graph", features = ["json", "sndlib_xml"] }
