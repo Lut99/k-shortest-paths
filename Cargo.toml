@@ -27,5 +27,6 @@ repository = "https://github.com/Lut99/k-shortest-paths"
 
 [workspace]
 members = [
-    "ksp-bench"
+    "ksp-bench",
+    "ksp-vis"
 ]

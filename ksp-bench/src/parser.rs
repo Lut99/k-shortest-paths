@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:54:32
 //  Last edited:
-//    16 Jul 2024, 02:41:45
+//    19 Jul 2024, 01:02:12
 //  Auto updated?
 //    Yes
 //
@@ -230,7 +230,7 @@ pub fn parse_sndlib_xml(path: impl AsRef<Path>) -> Result<(Graph, Vec<TestCase>)
                 .nodes
                 .nodes
                 .into_iter()
-                .map(|n| (n.id, Node { id: n.id, pos: Some((n.coordinates.x, n.coordinates.y)) }))
+                .map(|n| (n.id, Node { id: n.id, pos: (n.coordinates.x, n.coordinates.y) }))
                 .collect(),
             edges: bench
                 .network_structure

@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:21:34
 //  Last edited:
-//    16 Jul 2024, 02:17:23
+//    19 Jul 2024, 01:01:52
 //  Auto updated?
 //    Yes
 //
@@ -33,7 +33,7 @@ pub struct Node {
     /// The identifier of the node.
     pub id:  ArrayString<64>,
     /// If there's any coordinate information available, this will place it in a 2D-space.
-    pub pos: Option<(f64, f64)>,
+    pub pos: (f64, f64),
 }
 
 /// Defines a link between nodes in each graph.

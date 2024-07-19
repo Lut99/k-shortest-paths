@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    18 Jul 2024, 00:04:11
+//    19 Jul 2024, 01:27:07
 //  Auto updated?
 //    Yes
 //
@@ -22,6 +22,62 @@ use arrayvec::ArrayString;
 use crate::graph::Graph;
 use crate::path::Path;
 use crate::Routing;
+
+
+/***** TESTS *****/
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graph::{Edge, Node};
+
+    #[test]
+    fn test_sssp() {
+        let g = Graph {
+            nodes: HashMap::from([
+                (ArrayString::from("Amsterdam").unwrap(), Node { id: ArrayString::from("Amsterdam").unwrap(), pos: (52.3673, 4.9041) }),
+                (ArrayString::from("Berlin").unwrap(), Node { id: ArrayString::from("Berlin").unwrap(), pos: (52.5200, 13.4050) }),
+                (ArrayString::from("Chicago").unwrap(), Node { id: ArrayString::from("Chicago").unwrap(), pos: (41.8781, 87.6298) }),
+                (ArrayString::from("Dorchester").unwrap(), Node { id: ArrayString::from("Dorchester").unwrap(), pos: (50.7112, 2.4412) }),
+                (ArrayString::from("Edinburgh").unwrap(), Node { id: ArrayString::from("Edinburgh").unwrap(), pos: (55.9533, 3.1883) }),
+            ]),
+            edges: HashMap::from([
+                (ArrayString::from("Amsterdam-Berlin").unwrap(), Edge {
+                    id:    ArrayString::from("Amsterdam-Berlin").unwrap(),
+                    left:  ArrayString::from("Amsterdam").unwrap(),
+                    right: ArrayString::from("Berlin").unwrap(),
+                    cost:  577.34,
+                }),
+                (ArrayString::from("Amsterdam-Dorchester").unwrap(), Edge {
+                    id:    ArrayString::from("Amsterdam-Dorchester").unwrap(),
+                    left:  ArrayString::from("Amsterdam").unwrap(),
+                    right: ArrayString::from("Dorchester").unwrap(),
+                    cost:  540.86,
+                }),
+                (ArrayString::from("Amsterdam-Edinburgh").unwrap(), Edge {
+                    id:    ArrayString::from("Amsterdam-Edinburgh").unwrap(),
+                    left:  ArrayString::from("Amsterdam").unwrap(),
+                    right: ArrayString::from("Edinburgh").unwrap(),
+                    cost:  660.68,
+                }),
+                (ArrayString::from("Dorchester-Edinburgh").unwrap(), Edge {
+                    id:    ArrayString::from("Dorchester-Edinburgh").unwrap(),
+                    left:  ArrayString::from("Dorchester").unwrap(),
+                    right: ArrayString::from("Edinburgh").unwrap(),
+                    cost:  589.23,
+                }),
+                (ArrayString::from("Chicago-Dorchester").unwrap(), Edge {
+                    id:    ArrayString::from("Chicago-Dorchester").unwrap(),
+                    left:  ArrayString::from("Chicago").unwrap(),
+                    right: ArrayString::from("Dorchester").unwrap(),
+                    cost:  6249.15,
+                }),
+            ]),
+        };
+    }
+}
+
+
+
 
 
 /***** AUXILLARY *****/
