@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    19 Jul 2024, 23:53:31
+//    23 Jul 2024, 02:38:30
 //  Auto updated?
 //    Yes
 //
@@ -12,8 +12,26 @@
 //!   Implements the actual renderer to write a [`Graph`] to an image.
 //
 
+use fontdue::{Font, Metrics};
 use image::{Rgba, RgbaImage};
 use ksp_graph::Graph;
+use lazy_static::lazy_static;
+use log::warn;
+
+
+/***** CONSTANTS *****/
+/// The embedded TTF file.
+const FONT_RAW: &[u8] = include_bytes!("../assets/OpenSans-Regular.ttf");
+/// The size at which we render text.
+const FONT_SIZE: f32 = 16.0;
+
+lazy_static! {
+    /// A parsed variation of the [`FONT_RAW`] font used for [`draw_label()`].
+    static ref FONTS: [Font; 1] = [Font::from_bytes(FONT_RAW, fontdue::FontSettings::default()).unwrap()];
+}
+
+
+
 
 
 /***** HELPER FUNCTIONS *****/
@@ -96,6 +114,65 @@ fn draw_point(img: &mut RgbaImage, pos: (u32, u32)) {
     }
 }
 
+/// Draws a label next to a point on the image.
+///
+/// Attempts to do some clever placing if at all possible.
+///
+/// # Arguments
+/// - `img`: The [`RgbaImage`] to draw to.
+/// - `pos`: The coordinate to draw the point on.
+/// - `label`: The label to write.
+fn draw_label(img: &mut RgbaImage, pos: (u32, u32), label: &str) {
+    // Render the text to a smaller image
+    let text: RgbaImage = {
+        // Render every character into that image
+        let (mut w, mut ph, mut nh): (u32, u32, u32) = (0, 0, 0);
+        let mut chars: Vec<(Vec<u8>, u32, i32)> = Vec::new();
+        for c in label.chars() {
+            // Render the individual character
+            if c.is_control() {
+                warn!("Skipping control character {c:?} in {label:?}");
+                continue;
+            }
+            let (metrics, bitmap): (Metrics, Vec<u8>) = FONTS[0].rasterize(c, FONT_SIZE);
+            chars.push((bitmap, metrics.width as u32, metrics.ymin));
+
+            // Consider how to reshape the target image
+            w += metrics.width as u32;
+            let cph: u32 = if metrics.ymin <= metrics.height as i32 { (metrics.height as i32 + metrics.ymin) as u32 } else { 0 };
+            let cnh: u32 = if metrics.ymin >= 0 { 0 } else { (-metrics.ymin) as u32 };
+            if ph < cph {
+                ph = cph;
+            }
+            if nh < cnh {
+                nh = cnh;
+            }
+            println!("{}x{}+({}) becomes {}x(+{},-{})", metrics.width, metrics.height, metrics.ymin, w, ph, nh);
+        }
+
+        // Now render to the image
+        let mut text: RgbaImage = RgbaImage::new(w, ph + nh);
+        let mut pos: u32 = 0;
+        for (c, width, ymin) in chars {
+            // Place the image
+            let height: u32 = c.len() as u32 / width;
+            for y in 0..height {
+                for x in 0..width {
+                    text[(pos + x, (((height - 1 - y) as i32) + ymin) as u32)] =
+                        Rgba([c[(y * width + x) as usize], 0, 0, c[(y * width + x) as usize]]);
+                }
+            }
+            pos += width;
+        }
+
+        // Done
+        text
+    };
+
+    // Show it
+    *img = text;
+}
+
 
 
 
@@ -165,6 +242,11 @@ pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
     // Draw the nodes
     for node in graph.nodes.values() {
         draw_point(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims));
+    }
+    // Draw the labels to the nodes
+    for node in graph.nodes.values() {
+        draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), node.id.as_str());
+        break;
     }
 
     // Done

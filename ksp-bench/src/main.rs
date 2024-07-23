@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    19 Jul 2024, 23:53:09
+//    23 Jul 2024, 01:48:46
 //  Auto updated?
 //    Yes
 //
@@ -164,7 +164,7 @@ fn main() {
             debug!("Benchmarking for test '{}' ({}/{})...", test.id, i + 1, tests.len());
 
             // Benchmark the test
-            let mut min_cost: Vec<Option<f64>> = vec![None; test.k];
+            let mut min_cost: Vec<Option<Path>> = vec![None; test.k];
             for alg in Algorithm::all() {
                 let paths: Vec<Path> = match alg {
                     #[cfg(feature = "peek")]
@@ -233,18 +233,20 @@ fn main() {
                     }
 
                     // Check whether the test agrees with the minimum
-                    if let Some(prev) = min_cost[i] {
-                        if path.cost() != prev {
+                    if let Some(prev) = &min_cost[i] {
+                        if path.cost() != prev.cost() {
                             panic!(
-                                "Benchmark '{}' failed for {:?}: path not shortest (got {}, previous alg got {})",
+                                "Benchmark '{}' failed for {:?}: path not shortest (got {}, previous alg got {})\n\nPath:\n{}\n\nPrev path:\n{}\n",
                                 test.id,
                                 alg,
                                 path.cost(),
-                                prev
+                                prev.cost(),
+                                path,
+                                prev,
                             );
                         }
                     } else {
-                        min_cost[i] = Some(path.cost());
+                        min_cost[i] = Some(path);
                     }
                 }
             }

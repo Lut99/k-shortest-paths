@@ -17,8 +17,10 @@ path = "src/main.rs"
 arrayvec = { version = "0.7", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
+fontdue = "0.9"
 humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
 image = { version = "0.25", features = [] }
+lazy_static = "1.5"
 log = "0.4"
 
 ksp = { path = "../" }

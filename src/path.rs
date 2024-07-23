@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 02:05:23
 //  Last edited:
-//    20 Jul 2024, 01:54:54
+//    23 Jul 2024, 01:45:54
 //  Auto updated?
 //    Yes
 //
@@ -12,6 +12,7 @@
 //!   Defines a path between two nodes.
 //
 
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::hash::{Hash, Hasher};
 
@@ -139,4 +140,14 @@ impl<'g> PartialEq for Path<'g> {
         }
         return true;
     }
+}
+impl<'g> PartialOrd for Path<'g> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.hops.last().map(|(_, cost)| *cost).unwrap_or(0.0).partial_cmp(other.hops.last().map(|(_, cost)| cost).unwrap_or(&0.0))
+    }
+}
+impl<'g> Ord for Path<'g> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering { self.partial_cmp(other).unwrap() }
 }

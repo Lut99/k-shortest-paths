@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    20 Jul 2024, 01:54:41
+//    23 Jul 2024, 01:52:18
 //  Auto updated?
 //    Yes
 //
@@ -14,7 +14,7 @@
 //!   Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 //
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use arrayvec::ArrayString;
 use ksp_graph::Graph;
@@ -28,10 +28,10 @@ use crate::Routing;
 mod tests {
     use super::*;
     use crate::path;
-    use crate::utils::load_graph;
+    use crate::utils::{load_bench, load_graph};
 
     #[test]
-    fn test_wikipedia_ksp() {
+    fn test_wikipedia_ksp_cities() {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
@@ -43,6 +43,15 @@ mod tests {
             assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
                 path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
+        }
+    }
+
+    #[test]
+    fn test_wikipedia_ksp_india35() {
+        // Run some more difficult ones
+        for _ in 0..10 {
+            let g: Graph = load_bench("india35");
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
         }
     }
 }
@@ -73,9 +82,9 @@ impl Routing for WikipediaKSP {
         // Then do the algorithm
         let mut shortest: Vec<Path<'g>> = Vec::with_capacity(k);
         let mut shortest_to: HashMap<&str, usize> = HashMap::with_capacity(graph.nodes.len());
-        let mut todo: Vec<Path<'g>> = vec![Path { hops: vec![(src, 0.0)] }];
+        let mut todo: BTreeSet<Path<'g>> = BTreeSet::from([Path { hops: vec![(src, 0.0)] }]);
         while !todo.is_empty() && *shortest_to.entry(dst).or_default() < k {
-            let path: Path<'g> = todo.pop().unwrap();
+            let path: Path<'g> = todo.pop_first().unwrap();
             let end: &str = path.end().unwrap();
 
             // Note how many paths we found to this node
@@ -98,8 +107,8 @@ impl Routing for WikipediaKSP {
                         continue;
                     }
 
-                    // Add it
-                    todo.push(Path { hops })
+                    // Add it but ordered by cost
+                    todo.insert(Path { hops });
                 }
             }
         }

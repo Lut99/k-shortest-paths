@@ -17,7 +17,7 @@ ksp-graph = { path = "./ksp-graph" }
 
 [dev-dependencies]
 error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
-ksp-graph = { path = "./ksp-graph", features = ["json"] }
+ksp-graph = { path = "./ksp-graph", features = ["json", "sndlib_xml"] }
 
 
 [features]
