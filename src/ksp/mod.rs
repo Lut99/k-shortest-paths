@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 01:44:45
 //  Last edited:
-//    24 Jul 2024, 01:54:04
+//    24 Jul 2024, 23:31:21
 //  Auto updated?
 //    Yes
 //
@@ -58,6 +58,18 @@ impl Algorithm {
     /// A static list of the implemented algorithms.
     #[inline]
     pub const fn all() -> &'static [Self] { &[Self::Wikipedia, Self::Yen] }
+
+    /// Whether this algorithms _needs_ an SSSP defined or not.
+    ///
+    /// # Returns
+    /// True if an SSSP needs to be set in the pipeline, or else false.
+    #[inline]
+    pub const fn needs_sssp(&self) -> bool {
+        match self {
+            Self::Wikipedia => false,
+            Self::Yen => true,
+        }
+    }
 }
 impl FromStr for Algorithm {
     type Err = UnknownAlgorithmError;
@@ -89,5 +101,5 @@ pub trait KShortestPath {
     ///
     /// # Panics
     /// This function is allowed to panic if the given `src` or `dst` are not in the given `graph`.
-    fn k_shortest_paths<'g>(graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>>;
+    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>>;
 }

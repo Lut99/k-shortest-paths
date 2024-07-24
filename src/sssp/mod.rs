@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:41:28
 //  Last edited:
-//    24 Jul 2024, 02:04:00
+//    24 Jul 2024, 20:54:18
 //  Auto updated?
 //    Yes
 //
@@ -14,6 +14,7 @@
 
 // Declarations
 pub mod dijkstra;
+pub mod profiled;
 
 // Imports
 use std::error::Error;
@@ -88,5 +89,11 @@ pub trait SingleShortestPath {
     ///
     /// # Panics
     /// This function is allowed to panic if the given `src` or `dst` are not in the given `graph` or they are not connected.
-    fn shortest<'g>(graph: &'g Graph, src: &str, dst: &str) -> Path<'g>;
+    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g>;
+}
+
+// Pointer-like impls
+impl<'a, T: SingleShortestPath> SingleShortestPath for &'a mut T {
+    #[inline]
+    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> { <T as SingleShortestPath>::shortest(self, graph, src, dst) }
 }

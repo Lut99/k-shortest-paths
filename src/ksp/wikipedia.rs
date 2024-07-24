@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    24 Jul 2024, 01:50:34
+//    24 Jul 2024, 20:47:54
 //  Auto updated?
 //    Yes
 //
@@ -35,12 +35,12 @@ mod tests {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
-            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
-            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
-            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
                 path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
-            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
                 path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
         }
@@ -51,7 +51,7 @@ mod tests {
         // Run some more difficult ones
         for _ in 0..10 {
             let g: Graph = load_bench("india35");
-            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
+            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
         }
     }
 }
@@ -68,7 +68,7 @@ mod tests {
 pub struct WikipediaKSP;
 impl KShortestPath for WikipediaKSP {
     #[track_caller]
-    fn k_shortest_paths<'g>(graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
+    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
         // Assert that both nodes exists
         let src: &'g str = if let Some((key, _)) = graph.nodes.get_key_value(&ArrayString::from(src).unwrap()) {
             key

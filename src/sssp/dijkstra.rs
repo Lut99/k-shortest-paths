@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:43:39
 //  Last edited:
-//    24 Jul 2024, 02:04:13
+//    24 Jul 2024, 20:41:16
 //  Auto updated?
 //    Yes
 //
@@ -32,10 +32,10 @@ mod tests {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
-            assert_eq!(DijkstraSSSP::shortest(&g, "Amsterdam", "Berlin"), path!(crate : g, "Amsterdam" -| "Berlin"));
-            assert_eq!(DijkstraSSSP::shortest(&g, "Amsterdam", "Dorchester"), path!(crate : g, "Amsterdam" -| "Dorchester"));
-            assert_eq!(DijkstraSSSP::shortest(&g, "Amsterdam", "Chicago"), path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago"));
-            assert_eq!(DijkstraSSSP::shortest(&g, "Berlin", "Chicago"), path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago"));
+            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Berlin"), path!(crate : g, "Amsterdam" -| "Berlin"));
+            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Dorchester"), path!(crate : g, "Amsterdam" -| "Dorchester"));
+            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Chicago"), path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago"));
+            assert_eq!(DijkstraSSSP.shortest(&g, "Berlin", "Chicago"), path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago"));
         }
     }
 }
@@ -55,7 +55,7 @@ mod tests {
 pub struct DijkstraSSSP;
 impl SingleShortestPath for DijkstraSSSP {
     #[track_caller]
-    fn shortest<'g>(graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
+    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
         // Do a depth-first search with the shortest path heuristic
         let mut distances: HashMap<&'g str, (f64, bool)> =
             graph.nodes.keys().map(|id| (id.as_str(), if id.as_str() == src { (0.0, false) } else { (f64::INFINITY, false) })).collect();

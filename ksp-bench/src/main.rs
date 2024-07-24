@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    24 Jul 2024, 02:12:01
+//    24 Jul 2024, 22:57:47
 //  Auto updated?
 //    Yes
 //
@@ -15,13 +15,12 @@
 use std::collections::HashMap;
 use std::fs::{self, DirEntry, ReadDir};
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
 
 use clap::Parser;
 use comfy_table::Table;
 use error_trace::trace;
 use humanlog::{DebugMode, HumanLogger};
-use ksp::{Algorithm, KShortestPath as _, Path, Pipeline};
+use ksp::{Path, Pipeline, PipelineProfile};
 use ksp_bench::parser::{self};
 use ksp_bench::tests::TestCase;
 use ksp_graph::{Graph, GraphFormat};
@@ -185,16 +184,17 @@ fn main() {
 
 
         // Now run some routing algorithm on all tests
-        let mut results: HashMap<&str, HashMap<Algorithm, Duration>> = HashMap::new();
+        let mut results: HashMap<&str, HashMap<Pipeline, PipelineProfile>> = HashMap::new();
         for (i, test) in tests.iter().enumerate() {
             debug!("Benchmarking for test '{}' ({}/{})...", test.id, i + 1, tests.len());
 
             // Benchmark the test
-            let mut min_cost: Vec<Option<Path>> = vec![None; test.k];
-            for pip in args.algs {
+            let mut min_cost: Vec<Option<(String, f64)>> = vec![None; test.k];
+            for pip in &args.algs {
                 let mut g: Graph = graph.clone();
                 let (paths, profile): (Vec<Path>, PipelineProfile) =
                     pip.k_shortest_paths_profiled(&mut g, test.source.as_str(), test.target.as_str(), test.k);
+                results.insert(test.id.as_str(), HashMap::from([(pip.clone(), profile)]));
 
                 // Verify correctness of the paths
                 for (i, path) in paths.into_iter().enumerate() {
@@ -207,38 +207,32 @@ fn main() {
                                 continue 'hops;
                             }
                         }
-                        panic!("Benchmark '{}' failed for {:?}: not all paths are connected\n\nPath: {:?}", test.id, alg, path);
+                        panic!("Benchmark '{}' failed for {}: not all paths are connected\n\nPath: {:?}", test.id, pip, path);
                     }
 
                     // Ensure the path connects the test's endpoints
                     if path.hops.first().unwrap().0 != test.source.as_str() {
-                        panic!(
-                            "Benchmark '{}' failed for {:?}: path doesn't start at test source ({})\n\nPath: {:?}",
-                            test.id, pip, test.source, path
-                        );
+                        panic!("Benchmark '{}' failed for {}: path doesn't start at test source ({})\n\nPath: {:?}", test.id, pip, test.source, path);
                     }
                     if path.hops.last().unwrap().0 != test.target.as_str() {
-                        panic!(
-                            "Benchmark '{}' failed for {:?}: path doesn't start at test target ({})\n\nPath: {:?}",
-                            test.id, pip, test.target, path
-                        );
+                        panic!("Benchmark '{}' failed for {}: path doesn't start at test target ({})\n\nPath: {:?}", test.id, pip, test.target, path);
                     }
 
                     // Check whether the test agrees with the minimum
                     if let Some(prev) = &min_cost[i] {
-                        if path.cost() != prev.cost() {
+                        if path.cost() != prev.1 {
                             panic!(
-                                "Benchmark '{}' failed for {:?}: path not shortest (got {}, previous alg got {})\n\nPath:\n{}\n\nPrev path:\n{}\n",
+                                "Benchmark '{}' failed for {}: path not shortest (got {}, previous alg got {})\n\nPath:\n{}\n\nPrev path:\n{}\n",
                                 test.id,
                                 pip,
                                 path.cost(),
-                                prev.cost(),
+                                prev.1,
                                 path,
-                                prev,
+                                prev.0,
                             );
                         }
                     } else {
-                        min_cost[i] = Some(path);
+                        min_cost[i] = Some((path.to_string(), path.cost()));
                     }
                 }
             }
@@ -247,16 +241,12 @@ fn main() {
         // Format the results in some nice table
         if !args.csv {
             let mut table = Table::new();
-            table.set_header(
-                ["Benchmark".to_string(), "Executed test".to_string()]
-                    .into_iter()
-                    .chain(Algorithm::all().into_iter().map(|a| format!("{a:?} duration (ms)"))),
-            );
+            table.set_header(["Benchmark".to_string(), "Executed test".to_string()].into_iter().chain(args.algs.iter().map(|p| p.to_string())));
             for (test, times) in results {
                 table.add_row(
                     [name.to_string(), test.to_string()]
                         .into_iter()
-                        .chain(Algorithm::all().into_iter().map(|a| ((times.get(a).unwrap().as_nanos() as f64) / 1000000.0).to_string())),
+                        .chain(args.algs.iter().map(|p| ((times.get(p).unwrap().alg.as_nanos() as f64) / 1000000.0).to_string())),
                 );
             }
             println!("{table}");
@@ -264,8 +254,8 @@ fn main() {
             // Print the header
             if first {
                 print!("Benchmark,Executed test");
-                for alg in results.values().next().into_iter().flat_map(|t| t.keys().map(|a| format!("{a:?} duration (ms)"))) {
-                    print!(",{alg}");
+                for pip in args.algs.iter() {
+                    print!(",{pip} duration (ms)");
                 }
                 println!();
             }
@@ -273,7 +263,7 @@ fn main() {
             // Print the rows
             for (test, times) in results {
                 print!("{name},{test}");
-                for time in times.into_values().map(|t| (t.as_nanos() as f64) / 1000000.0) {
+                for time in args.algs.iter().map(|p| ((times.get(p).unwrap().alg.as_nanos() as f64) / 1000000.0)) {
                     print!(",{time}");
                 }
                 println!();
