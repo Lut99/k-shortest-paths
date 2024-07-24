@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:54:32
 //  Last edited:
-//    24 Jul 2024, 00:24:23
+//    25 Jul 2024, 00:08:56
 //  Auto updated?
 //    Yes
 //
@@ -212,13 +212,39 @@ pub fn parse(path: impl AsRef<Path>) -> Result<Graph, Error> {
     let path: &Path = path.as_ref();
 
     // Open & parse the file
-    let bench: XmlNetwork = match File::open(&path) {
+    let mut bench: XmlNetwork = match File::open(&path) {
         Ok(handle) => match quick_xml::de::from_reader(BufReader::new(handle)) {
             Ok(bench) => bench,
             Err(err) => return Err(Error::FileReadParse { path: path.into(), err }),
         },
         Err(err) => return Err(Error::FileOpen { path: path.into(), err }),
     };
+
+    // Resolve cost if not given
+    for link in &mut bench.network_structure.links.links {
+        if link.routing_cost.is_none() {
+            // Fetch the two nodes
+            let source: &XmlNode = bench
+                .network_structure
+                .nodes
+                .nodes
+                .iter()
+                .find(|n| n.id == link.source)
+                .unwrap_or_else(|| panic!("Encountered unknown source node '{}' in link '{}'", link.source, link.id));
+            let target: &XmlNode = bench
+                .network_structure
+                .nodes
+                .nodes
+                .iter()
+                .find(|n| n.id == link.target)
+                .unwrap_or_else(|| panic!("Encountered unknown target node '{}' in link '{}'", link.source, link.id));
+
+            // The cost is their positional difference
+            let dx: f64 = source.coordinates.x - target.coordinates.x;
+            let dy: f64 = source.coordinates.y - target.coordinates.y;
+            link.routing_cost = Some((dx * dx + dy * dy).sqrt());
+        }
+    }
 
     // Convert it to the standardized Graph.
     Ok(Graph {
@@ -229,8 +255,8 @@ pub fn parse(path: impl AsRef<Path>) -> Result<Graph, Error> {
             .links
             .into_iter()
             .map(|l| {
-                // Collect the cost of the node
-                (l.id, Edge { id: l.id, left: l.source, right: l.target, cost: l.routing_cost.unwrap_or(1.0) })
+                // Write it an edge (cost is given, see above)
+                (l.id, Edge { id: l.id, left: l.source, right: l.target, cost: l.routing_cost.unwrap() })
             })
             .collect(),
     })

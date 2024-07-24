@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    24 Jul 2024, 00:28:33
+//    25 Jul 2024, 00:09:55
 //  Auto updated?
 //    Yes
 //
@@ -12,7 +12,9 @@
 //!   Implements the actual renderer to write a [`Graph`] to an image.
 //
 
-use image::{GenericImageView, Rgba, RgbaImage};
+use std::cmp::{max, min};
+
+use image::{GenericImageView, Pixel, Rgb, Rgba, RgbaImage};
 use ksp_graph::Graph;
 use lazy_static::lazy_static;
 use rusttype::{point, Font, PositionedGlyph, Scale, VMetrics};
@@ -124,7 +126,9 @@ fn draw_point(img: &mut RgbaImage, pos: (u32, u32)) {
 /// - `img`: The [`RgbaImage`] to draw to.
 /// - `pos`: The coordinate to draw the point on.
 /// - `label`: The label to write.
-fn draw_label(img: &mut RgbaImage, pos: (u32, u32), label: &str) {
+/// - `bg`: If given, gives the labels a static background colour.
+/// - `clever_placement`: If true, then it will attempt to find a best place to display the label _around_ the chosen position. Else, will just place it over the given pos.
+fn draw_label(img: &mut RgbaImage, pos: (u32, u32), label: &str, bg: Option<Rgb<u8>>, clever_placement: bool) {
     // Render the text to a smaller image
     let text: RgbaImage = {
         // Find out what the vertical properties are of this font
@@ -173,18 +177,42 @@ fn draw_label(img: &mut RgbaImage, pos: (u32, u32), label: &str) {
         }
         text = text.view(0, n_top, text.width(), text.height() - n_top - n_bot).to_image();
 
+        // If there's a background colour, generate that first
+        if let Some(color) = bg {
+            let color: Rgba<u8> = color.to_rgba();
+
+            // Generate the static background color
+            let mut bg: RgbaImage = RgbaImage::new(text.width(), text.height());
+            for pix in bg.pixels_mut() {
+                *pix = color;
+            }
+
+            // Merge the text onto it
+            image::imageops::overlay(&mut bg, &text, 0, 0);
+            text = bg;
+        }
+
         // Done
         text
     };
 
-    // Attempt to position it BOTTOM, LEFT, TOP, RIGHT
-    for (bb, force) in [
-        (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), false),
-        (((pos.0 - text.width() - 5, pos.1 - text.height() / 2), (pos.0 - 5, pos.1 + text.height() / 2)), false),
-        (((pos.0 - text.width() / 2, pos.1 + 5), (pos.0 + text.width() / 2, pos.1 + text.height() + 5)), false),
-        (((pos.0 + 5, pos.1 - text.height() / 2), (pos.0 + text.width() + 5, pos.1 + text.height() / 2)), false),
-        (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), true),
-    ] {
+    // Define the positions to try
+    let posses: &[(((u32, u32), (u32, u32)), bool)] = if clever_placement {
+        // Attempt to position it BOTTOM, LEFT, TOP, RIGHT, then BOTTOM but just forcing it
+        &[
+            (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), false),
+            (((pos.0 - text.width() - 5, pos.1 - text.height() / 2), (pos.0 - 5, pos.1 + text.height() / 2)), false),
+            (((pos.0 - text.width() / 2, pos.1 + 5), (pos.0 + text.width() / 2, pos.1 + text.height() + 5)), false),
+            (((pos.0 + 5, pos.1 - text.height() / 2), (pos.0 + text.width() + 5, pos.1 + text.height() / 2)), false),
+            (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), true),
+        ]
+    } else {
+        // Just force it on the position itself
+        &[(((pos.0 - text.width() / 2, pos.1 - text.height() / 2), (pos.0 + text.width() / 2, pos.1 + text.height() / 2)), true)]
+    };
+
+    // Attempt to position the label
+    for (bb, force) in posses {
         // See if we're overlapping with anything
         if !force && pos.1 >= 5 + text.height() {
             let mut clear: bool = true;
@@ -274,6 +302,16 @@ pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
 
         // Draw a line between them
         draw_line(&mut img, pos1, pos2);
+
+        // Annotate the cost
+        let bb: ((u32, u32), (u32, u32)) = ((min(pos1.0, pos2.0), min(pos1.1, pos2.1)), (max(pos1.0, pos2.0), max(pos1.1, pos2.1)));
+        draw_label(
+            &mut img,
+            (bb.0.0 + (bb.1.0 - bb.0.0) / 2, bb.0.1 + (bb.1.1 - bb.0.1) / 2),
+            &format!("{:.2}", edge.cost),
+            Some(Rgb([255, 255, 255])),
+            false,
+        );
     }
 
     // Draw the nodes
@@ -282,7 +320,7 @@ pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
     }
     // Draw the labels to the nodes
     for node in graph.nodes.values() {
-        draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), node.id.as_str());
+        draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), node.id.as_str(), None, true);
     }
 
     // Done

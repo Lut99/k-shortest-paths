@@ -2,23 +2,23 @@
     "nodes": {
         "Amsterdam": {
             "id": "Amsterdam",
-            "pos": [52.3673, 4.9041]
+            "pos": [4.9041, 52.3673]
         },
         "Berlin": {
             "id": "Berlin",
-            "pos": [52.5200, 13.4050]
+            "pos": [13.4050, 52.5200]
         },
         "Chicago": {
             "id": "Chicago",
-            "pos": [41.8781, 87.6298]
+            "pos": [-87.6298, 41.8781]
         },
         "Dorchester": {
             "id": "Dorchester",
-            "pos":[50.7112, 2.4412]
+            "pos":[2.4412, 50.7112]
         },
         "Edinburgh": {
             "id": "Edinburgh",
-            "pos": [55.9533, 3.1883]
+            "pos": [3.1883, 55.9533]
         }
     },
     "edges": {

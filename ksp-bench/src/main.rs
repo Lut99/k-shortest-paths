@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    24 Jul 2024, 22:57:47
+//    25 Jul 2024, 00:16:34
 //  Auto updated?
 //    Yes
 //
@@ -12,6 +12,7 @@
 //!   Entrypoint for the `benchmark`-binary.
 //
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::{self, DirEntry, ReadDir};
 use std::path::PathBuf;
@@ -133,8 +134,10 @@ fn main() {
 
             // See if it ends in .xml
             let entry_path: PathBuf = entry.path();
-            if !entry_path.ends_with("xml") {
+            let entry_name: Cow<str> = entry_path.file_name().unwrap_or_else(|| entry_path.as_os_str()).to_string_lossy();
+            if !entry_name.ends_with(".xml") {
                 debug!("Skipping entry '{}' as it does not end in '.xml'", entry_path.display());
+                continue;
             }
 
             // Add it
@@ -146,7 +149,7 @@ fn main() {
     debug!("Running {} benchmark(s)", files.len());
     let mut first: bool = true;
     for (name, file, fmt) in files {
-        info!("Benchmark {:?} ({}) ({:?})", name, file.display(), fmt);
+        debug!("Loading benchmark {:?} @ '{}' as {:?}...", name, file.display(), fmt);
 
         // Open the file and parse the graph & test case
         let mut graph: Graph = match fmt {
@@ -186,15 +189,14 @@ fn main() {
         // Now run some routing algorithm on all tests
         let mut results: HashMap<&str, HashMap<Pipeline, PipelineProfile>> = HashMap::new();
         for (i, test) in tests.iter().enumerate() {
-            debug!("Benchmarking for test '{}' ({}/{})...", test.id, i + 1, tests.len());
-
             // Benchmark the test
             let mut min_cost: Vec<Option<(String, f64)>> = vec![None; test.k];
             for pip in &args.algs {
+                debug!("Benchmarking {} for test '{}' ({}/{})...", pip, test.id, i + 1, tests.len());
                 let mut g: Graph = graph.clone();
                 let (paths, profile): (Vec<Path>, PipelineProfile) =
                     pip.k_shortest_paths_profiled(&mut g, test.source.as_str(), test.target.as_str(), test.k);
-                results.insert(test.id.as_str(), HashMap::from([(pip.clone(), profile)]));
+                results.entry(test.id.as_str()).or_default().insert(pip.clone(), profile);
 
                 // Verify correctness of the paths
                 for (i, path) in paths.into_iter().enumerate() {
