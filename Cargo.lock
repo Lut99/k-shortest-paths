@@ -655,7 +655,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ksp"
+name = "ksp-alg"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
@@ -673,7 +673,7 @@ dependencies = [
  "comfy-table",
  "error-trace",
  "humanlog",
- "ksp",
+ "ksp-alg",
  "ksp-graph",
  "log",
  "quick-xml",
@@ -690,6 +690,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ksp-pip"
+version = "0.1.0"
+dependencies = [
+ "ksp-alg",
+ "ksp-vis",
+ "serde",
+]
+
+[[package]]
 name = "ksp-vis"
 version = "0.1.0"
 dependencies = [
@@ -698,7 +707,6 @@ dependencies = [
  "error-trace",
  "humanlog",
  "image",
- "ksp",
  "ksp-graph",
  "lazy_static",
  "log",

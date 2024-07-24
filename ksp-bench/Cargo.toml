@@ -24,7 +24,7 @@ humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
 log = "0.4"
 quick-xml = { version = "0.36", features = ["serialize"] }
 
-ksp = { path = "../" }
+ksp-alg = { path = "../ksp-alg" }
 ksp-graph = { path = "../ksp-graph", features = ["json", "sndlib_xml"] }
 
 

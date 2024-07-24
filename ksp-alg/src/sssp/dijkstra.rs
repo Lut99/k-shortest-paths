@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:43:39
 //  Last edited:
-//    24 Jul 2024, 20:41:16
+//    25 Jul 2024, 01:13:11
 //  Auto updated?
 //    Yes
 //
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 use ksp_graph::Graph;
 
-use super::SingleShortestPath;
+use super::Routing;
 use crate::path::Path;
 
 
@@ -53,7 +53,7 @@ mod tests {
 /// \[2\] Dijkstra, E.W. A note on two problems in connexion with graphs.
 /// _Numer. Math._ 1, 269–271 (1959). https://doi.org/10.1007/BF01386390.
 pub struct DijkstraSSSP;
-impl SingleShortestPath for DijkstraSSSP {
+impl Routing for DijkstraSSSP {
     #[track_caller]
     fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
         // Do a depth-first search with the shortest path heuristic

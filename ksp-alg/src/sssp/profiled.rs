@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 20:41:44
 //  Last edited:
-//    24 Jul 2024, 20:53:31
+//    25 Jul 2024, 01:13:06
 //  Auto updated?
 //    Yes
 //
@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use ksp_graph::Graph;
 
-use super::SingleShortestPath;
+use super::Routing;
 use crate::path::Path;
 
 
@@ -40,7 +40,7 @@ impl<S> ProfilingSSSP<S> {
     #[inline]
     pub const fn new(sssp: S) -> Self { Self { sssp, timings: vec![] } }
 }
-impl<S: SingleShortestPath> SingleShortestPath for ProfilingSSSP<S> {
+impl<S: Routing> Routing for ProfilingSSSP<S> {
     #[track_caller]
     fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
         // Record the run

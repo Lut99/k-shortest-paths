@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:41:28
 //  Last edited:
-//    24 Jul 2024, 20:54:18
+//    25 Jul 2024, 01:12:58
 //  Auto updated?
 //    Yes
 //
@@ -22,6 +22,8 @@ use std::fmt::{Display, Formatter, Result as FResult};
 use std::str::FromStr;
 
 use ksp_graph::Graph;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::path::Path;
 
@@ -46,6 +48,7 @@ impl Error for UnknownSsspError {}
 /***** LIBRARY *****/
 /// Overview of all SSSP algorithms in the libary.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum Sssp {
     /// Arguably the most famous one from Dijkstra ([2]).
     Dijkstra,
@@ -76,7 +79,7 @@ impl FromStr for Sssp {
 
 /***** LIBRARY *****/
 /// Defines an abstraction over various algorithms.
-pub trait SingleShortestPath {
+pub trait Routing {
     /// Finds the shortest paths from one node to another.
     ///
     /// # Arguments
@@ -93,7 +96,7 @@ pub trait SingleShortestPath {
 }
 
 // Pointer-like impls
-impl<'a, T: SingleShortestPath> SingleShortestPath for &'a mut T {
+impl<'a, T: Routing> Routing for &'a mut T {
     #[inline]
-    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> { <T as SingleShortestPath>::shortest(self, graph, src, dst) }
+    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> { <T as Routing>::shortest(self, graph, src, dst) }
 }

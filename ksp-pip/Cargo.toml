@@ -1,0 +1,13 @@
+[package]
+name = "ksp-pip"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+description = "Defines pipelines for executing KSP algorithms (and associates) end-to-end."
+
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+ksp-alg = { path = "../ksp-alg" }
+ksp-vis = { path = "../ksp-vis" }

@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    24 Jul 2024, 20:47:54
+//    25 Jul 2024, 01:13:51
 //  Auto updated?
 //    Yes
 //
@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use arrayvec::ArrayString;
 use ksp_graph::Graph;
 
-use super::KShortestPath;
+use super::MultiRouting;
 use crate::path::Path;
 
 
@@ -66,7 +66,7 @@ mod tests {
 /// Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 #[derive(Clone, Copy, Debug)]
 pub struct WikipediaKSP;
-impl KShortestPath for WikipediaKSP {
+impl MultiRouting for WikipediaKSP {
     #[track_caller]
     fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
         // Assert that both nodes exists
