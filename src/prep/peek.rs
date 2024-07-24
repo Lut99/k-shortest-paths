@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 20:42:17
 //  Last edited:
-//    19 Jul 2024, 23:47:00
+//    24 Jul 2024, 02:05:51
 //  Auto updated?
 //    Yes
 //
@@ -20,8 +20,9 @@
 
 use ksp_graph::Graph;
 
+use super::PreprocessStep;
 use crate::path::Path;
-use crate::Routing;
+use crate::sssp::dijkstra::DijkstraSSSP;
 
 
 /***** LIBRARY *****/
@@ -29,9 +30,9 @@ use crate::Routing;
 ///
 /// Based on \[1\].
 #[derive(Clone, Copy, Debug)]
-pub struct PeekKSP;
-impl Routing for PeekKSP {
-    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
+pub struct PeekPreprocess;
+impl PreprocessStep for PeekPreprocess {
+    fn preprocess(graph: &mut Graph, src: &str, dst: &str, k: usize) {
         todo!();
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    23 Jul 2024, 02:38:30
+//    24 Jul 2024, 00:28:33
 //  Auto updated?
 //    Yes
 //
@@ -12,22 +12,21 @@
 //!   Implements the actual renderer to write a [`Graph`] to an image.
 //
 
-use fontdue::{Font, Metrics};
-use image::{Rgba, RgbaImage};
+use image::{GenericImageView, Rgba, RgbaImage};
 use ksp_graph::Graph;
 use lazy_static::lazy_static;
-use log::warn;
+use rusttype::{point, Font, PositionedGlyph, Scale, VMetrics};
 
 
 /***** CONSTANTS *****/
 /// The embedded TTF file.
 const FONT_RAW: &[u8] = include_bytes!("../assets/OpenSans-Regular.ttf");
-/// The size at which we render text.
-const FONT_SIZE: f32 = 16.0;
 
 lazy_static! {
     /// A parsed variation of the [`FONT_RAW`] font used for [`draw_label()`].
-    static ref FONTS: [Font; 1] = [Font::from_bytes(FONT_RAW, fontdue::FontSettings::default()).unwrap()];
+    static ref FONT: Font<'static> = Font::try_from_bytes(FONT_RAW).unwrap_or_else(|| panic!("Failed to construct font"));
+    /// The size at which we render text.
+    static ref FONT_SIZE: Scale = Scale::uniform(16.0);
 }
 
 
@@ -118,6 +117,9 @@ fn draw_point(img: &mut RgbaImage, pos: (u32, u32)) {
 ///
 /// Attempts to do some clever placing if at all possible.
 ///
+/// Note that the main rendering algorithm of text is taken from:
+/// <https://gitlab.redox-os.org/redox-os/rusttype/-/blob/master/dev/examples/image.rs?ref_type=heads>
+///
 /// # Arguments
 /// - `img`: The [`RgbaImage`] to draw to.
 /// - `pos`: The coordinate to draw the point on.
@@ -125,52 +127,87 @@ fn draw_point(img: &mut RgbaImage, pos: (u32, u32)) {
 fn draw_label(img: &mut RgbaImage, pos: (u32, u32), label: &str) {
     // Render the text to a smaller image
     let text: RgbaImage = {
-        // Render every character into that image
-        let (mut w, mut ph, mut nh): (u32, u32, u32) = (0, 0, 0);
-        let mut chars: Vec<(Vec<u8>, u32, i32)> = Vec::new();
-        for c in label.chars() {
-            // Render the individual character
-            if c.is_control() {
-                warn!("Skipping control character {c:?} in {label:?}");
-                continue;
-            }
-            let (metrics, bitmap): (Metrics, Vec<u8>) = FONTS[0].rasterize(c, FONT_SIZE);
-            chars.push((bitmap, metrics.width as u32, metrics.ymin));
+        // Find out what the vertical properties are of this font
+        let v_metrics: VMetrics = FONT.v_metrics(*FONT_SIZE);
 
-            // Consider how to reshape the target image
-            w += metrics.width as u32;
-            let cph: u32 = if metrics.ymin <= metrics.height as i32 { (metrics.height as i32 + metrics.ymin) as u32 } else { 0 };
-            let cnh: u32 = if metrics.ymin >= 0 { 0 } else { (-metrics.ymin) as u32 };
-            if ph < cph {
-                ph = cph;
+        // Layout the glyphs
+        let glyphs: Vec<PositionedGlyph<'static>> = FONT.layout(label, *FONT_SIZE, point(0.0, v_metrics.ascent)).collect();
+
+        // Work out the total layout size
+        let (glyphs_width, x_offset): (u32, i32) = {
+            let min_x = glyphs.first().map(|g| g.pixel_bounding_box().unwrap().min.x).unwrap();
+            let max_x = glyphs.last().map(|g| g.pixel_bounding_box().unwrap().max.x).unwrap();
+            ((max_x - min_x) as u32, min_x)
+        };
+        let glyphs_height: u32 = (v_metrics.ascent - v_metrics.descent).ceil() as u32;
+
+        // Now actually render all those glyphs
+        let mut text: RgbaImage = RgbaImage::new(glyphs_width, glyphs_height);
+        for glyph in glyphs {
+            if let Some(bb) = glyph.pixel_bounding_box() {
+                // We draw the glyph pixel-for-pixel
+                glyph.draw(|x, y, v| {
+                    text.put_pixel(
+                        ((x as i32 + bb.min.x) - x_offset) as u32,
+                        glyphs_height - 1 - (y + bb.min.y as u32),
+                        Rgba([0, 0, 0, (v * 255.0 + 0.5) as u8]),
+                    );
+                })
             }
-            if nh < cnh {
-                nh = cnh;
-            }
-            println!("{}x{}+({}) becomes {}x(+{},-{})", metrics.width, metrics.height, metrics.ymin, w, ph, nh);
         }
 
-        // Now render to the image
-        let mut text: RgbaImage = RgbaImage::new(w, ph + nh);
-        let mut pos: u32 = 0;
-        for (c, width, ymin) in chars {
-            // Place the image
-            let height: u32 = c.len() as u32 / width;
-            for y in 0..height {
-                for x in 0..width {
-                    text[(pos + x, (((height - 1 - y) as i32) + ymin) as u32)] =
-                        Rgba([c[(y * width + x) as usize], 0, 0, c[(y * width + x) as usize]]);
-                }
+        // Trim the top- and bottom layers
+        let mut n_top: u32 = 0;
+        for mut row in img.rows() {
+            if row.any(|p| p.0[3] > 0) {
+                break;
             }
-            pos += width;
+            n_top += 1;
         }
+        let mut n_bot: u32 = 0;
+        for mut row in img.rows().rev() {
+            if row.any(|p| p.0[3] > 0) {
+                break;
+            }
+            n_bot += 1;
+        }
+        text = text.view(0, n_top, text.width(), text.height() - n_top - n_bot).to_image();
 
         // Done
         text
     };
 
-    // Show it
-    *img = text;
+    // Attempt to position it BOTTOM, LEFT, TOP, RIGHT
+    for (bb, force) in [
+        (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), false),
+        (((pos.0 - text.width() - 5, pos.1 - text.height() / 2), (pos.0 - 5, pos.1 + text.height() / 2)), false),
+        (((pos.0 - text.width() / 2, pos.1 + 5), (pos.0 + text.width() / 2, pos.1 + text.height() + 5)), false),
+        (((pos.0 + 5, pos.1 - text.height() / 2), (pos.0 + text.width() + 5, pos.1 + text.height() / 2)), false),
+        (((pos.0 - text.width() / 2, pos.1 - text.height() - 5), (pos.0 + text.width() / 2, pos.1 - 5)), true),
+    ] {
+        // See if we're overlapping with anything
+        if !force && pos.1 >= 5 + text.height() {
+            let mut clear: bool = true;
+            for y in bb.0.1..bb.1.1 {
+                for x in bb.0.0..bb.1.0 {
+                    if text[(x - bb.0.0, y - bb.0.1)].0[3] > 0 && img[(x, y)] != Rgba([255, 255, 255, 255]) {
+                        clear = false;
+                        break;
+                    }
+                }
+            }
+            if !clear {
+                continue;
+            }
+        }
+
+        // If we made it here, we're good to write
+        image::imageops::overlay(img, &text, bb.0.0 as i64, bb.0.1 as i64);
+        return;
+    }
+
+    // Just ignore for now
+    unreachable!();
 }
 
 
@@ -246,7 +283,6 @@ pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
     // Draw the labels to the nodes
     for node in graph.nodes.values() {
         draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), node.id.as_str());
-        break;
     }
 
     // Done

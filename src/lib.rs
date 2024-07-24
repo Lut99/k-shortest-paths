@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:06:19
 //  Last edited:
-//    20 Jul 2024, 01:06:17
+//    24 Jul 2024, 02:14:29
 //  Auto updated?
 //    Yes
 //
@@ -14,96 +14,58 @@
 //
 
 // Declare modules
+pub mod ksp;
 pub mod path;
-#[cfg(feature = "peek")]
-pub mod peek;
+pub mod prep;
+pub mod sssp;
 #[cfg(test)]
 pub mod utils;
-#[cfg(feature = "wikipedia")]
-pub mod wikipedia;
-#[cfg(feature = "yen")]
-pub mod yen;
 
-// Imports
-use std::error::Error;
-use std::fmt::{Display, Formatter, Result as FResult};
-use std::str::FromStr;
+use std::time::Duration;
 
-use ksp_graph::Graph;
 // Use some of it in this namespace
-pub use path::*;
+pub use crate::ksp::*;
+pub use crate::path::*;
 
 
 /***** ERRORS *****/
-/// Defines the error thrown when an unknown [`Algorithm`] was parsed.
+/// Failed to parse a [`Pipeline`] from a string.
 #[derive(Debug)]
-pub struct UnknownAlgorithmError {
-    /// The raw string that wasn't a recongized algorithm.
-    pub unknown: String,
+pub enum PipelineParseError {}
+
+
+
+
+
+/***** HELPERS *****/
+/// Defines profile timings of a [`Pipeline`]-run.
+#[derive(Clone, Debug)]
+pub struct PipelineProfile {
+    /// The amount of time each step took.
+    prep: Vec<Duration>,
+    /// The time the main algorithm took.
+    alg:  Duration,
+    /// The timings for all SSSP calls, if any.
+    sssp: Vec<Duration>,
 }
-impl Display for UnknownAlgorithmError {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult { write!(f, "Unknown KSP algorithm '{}'", self.unknown) }
-}
-impl Error for UnknownAlgorithmError {}
 
 
 
 
 
 /***** LIBRARY *****/
-/// Overview of all algorithms in the libary.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum Algorithm {
-    /// The optimised version as presented by the `PeeK`-paper [1].
-    #[cfg(feature = "peek")]
-    Peek,
-    /// The default, simplest version of a KSP-algorithm as presented by Wikipedia.
-    #[cfg(feature = "wikipedia")]
-    Wikipedia,
-    /// The default, simplest version of a KSP-algorithm as presented by the `PeeK`-paper [1].
-    #[cfg(feature = "yen")]
-    Yen,
+/// Defines a full chain that configures which KSP algorithm is run and how.
+#[derive(Clone, Debug)]
+pub struct Pipeline {
+    /// Preprocess steps to take.
+    prep: Vec<prep::Step>,
+    /// The algorithm to execute.
+    alg:  Algorithm,
+    /// Which SSSP algorithm to use if applicable.
+    sssp: Option<sssp::Sssp>,
 }
-impl Algorithm {
-    /// Returns all implemented algorithms.
-    ///
-    /// # Returns
-    /// A static list of the implemented algorithms.
-    #[inline]
-    pub const fn all() -> &'static [Self] {
-        &[
-            #[cfg(feature = "peek")]
-            Self::Peek,
-            #[cfg(feature = "wikipedia")]
-            Self::Wikipedia,
-            #[cfg(feature = "yen")]
-            Self::Yen,
-        ]
-    }
-}
-impl FromStr for Algorithm {
-    type Err = UnknownAlgorithmError;
-
-    #[inline]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            #[cfg(feature = "peek")]
-            "peek" => Ok(Self::Peek),
-            #[cfg(feature = "wikipedia")]
-            "wikipedia" => Ok(Self::Wikipedia),
-            #[cfg(feature = "yen")]
-            "yen" => Ok(Self::Yen),
-            other => Err(UnknownAlgorithmError { unknown: other.into() }),
-        }
-    }
-}
-
-
-
-/// Defines an abstraction over various algorithms.
-pub trait Routing {
-    /// Finds The K shortest paths from one node to another.
+impl Pipeline {
+    /// Computes the K-Shortest Path algorithm as defined by this [`Pipeline`].
     ///
     /// # Arguments
     /// - `graph`: The [`Graph`] to find in.
@@ -112,9 +74,35 @@ pub trait Routing {
     /// - `k`: The number of paths to find.
     ///
     /// # Returns
-    /// A list of the shortest paths found. Is at most `k` elements long.
+    /// A pair of the list of the shortest paths found and a [`PipelineProfile`] detailling how long every step took.
+    ///
+    /// The path list is at most `k` elements long.
     ///
     /// # Panics
     /// This function is allowed to panic if the given `src` or `dst` are not in the given `graph`.
-    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>>;
+    #[inline]
+    pub fn k_shortest_paths_profiled<'g>(&self, graph: &'g mut ksp_graph::Graph, src: &str, dst: &str, k: usize) -> (Vec<Path<'g>>, PipelineProfile) {
+        // First, pre-process the graph
+        for p in &self.prep {
+            use prep::PreprocessStep as _;
+            match p {
+                prep::Step::Peek => prep::peek::PeekPreprocess::preprocess(graph, src, dst, k),
+            }
+        }
+
+        // Run the appropriate KSP algorithm
+        match (&self.alg, &self.sssp) {
+            (Algorithm::Wikipedia, _) => ksp::wikipedia::WikipediaKSP::k_shortest_paths(graph, src, dst, k),
+            (Algorithm::Yen, Some(sssp::Sssp::Dijkstra)) => ksp::yen::YenKSP::<sssp::dijkstra::DijkstraSSSP>::k_shortest_paths(graph, src, dst, k),
+            (Algorithm::Yen, None) => panic!("Cannot run Yen without SSSP defined"),
+        }
+    }
+}
+impl std::str::FromStr for Pipeline {
+    type Err = PipelineParseError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!();
+    }
 }

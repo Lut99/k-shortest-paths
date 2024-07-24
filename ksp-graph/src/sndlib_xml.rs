@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:54:32
 //  Last edited:
-//    19 Jul 2024, 23:53:23
+//    24 Jul 2024, 00:24:23
 //  Auto updated?
 //    Yes
 //
@@ -230,7 +230,7 @@ pub fn parse(path: impl AsRef<Path>) -> Result<Graph, Error> {
             .into_iter()
             .map(|l| {
                 // Collect the cost of the node
-                (l.id, Edge { id: l.id, left: l.source, right: l.target, cost: l.routing_cost.unwrap_or(0.0) })
+                (l.id, Edge { id: l.id, left: l.source, right: l.target, cost: l.routing_cost.unwrap_or(1.0) })
             })
             .collect(),
     })

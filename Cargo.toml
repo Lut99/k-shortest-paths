@@ -21,11 +21,7 @@ ksp-graph = { path = "./ksp-graph", features = ["json", "sndlib_xml"] }
 
 
 [features]
-all = ["peek", "wikipedia", "yen"]
-
-peek = []
-wikipedia = []
-yen = []
+default = []
 
 
 [workspace.package]

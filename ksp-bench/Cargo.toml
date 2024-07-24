@@ -25,12 +25,8 @@ log = "0.4"
 quick-xml = { version = "0.36", features = ["serialize"] }
 
 ksp = { path = "../" }
-ksp-graph = { path = "../ksp-graph", features = ["sndlib_xml"] }
+ksp-graph = { path = "../ksp-graph", features = ["json", "sndlib_xml"] }
 
 
 [features]
-all = ["peek", "wikipedia", "yen"]
-
-peek = ["ksp/peek"]
-wikipedia = ["ksp/wikipedia"]
-yen = ["ksp/yen"]
+default = []

@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    23 Jul 2024, 01:52:18
+//    24 Jul 2024, 01:50:34
 //  Auto updated?
 //    Yes
 //
@@ -14,13 +14,13 @@
 //!   Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 //
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use arrayvec::ArrayString;
 use ksp_graph::Graph;
 
+use super::KShortestPath;
 use crate::path::Path;
-use crate::Routing;
 
 
 /***** TESTS *****/
@@ -35,12 +35,12 @@ mod tests {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
+            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
+            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
+            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
                 path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
+            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
                 path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
         }
@@ -51,7 +51,7 @@ mod tests {
         // Run some more difficult ones
         for _ in 0..10 {
             let g: Graph = load_bench("india35");
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
+            assert_eq!(WikipediaKSP::k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
         }
     }
 }
@@ -66,9 +66,9 @@ mod tests {
 /// Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 #[derive(Clone, Copy, Debug)]
 pub struct WikipediaKSP;
-impl Routing for WikipediaKSP {
+impl KShortestPath for WikipediaKSP {
     #[track_caller]
-    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
+    fn k_shortest_paths<'g>(graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
         // Assert that both nodes exists
         let src: &'g str = if let Some((key, _)) = graph.nodes.get_key_value(&ArrayString::from(src).unwrap()) {
             key
@@ -80,40 +80,60 @@ impl Routing for WikipediaKSP {
         }
 
         // Then do the algorithm
+        // > P = empty,
         let mut shortest: Vec<Path<'g>> = Vec::with_capacity(k);
+        // > count_u = 0, for all u in V
         let mut shortest_to: HashMap<&str, usize> = HashMap::with_capacity(graph.nodes.len());
-        let mut todo: BTreeSet<Path<'g>> = BTreeSet::from([Path { hops: vec![(src, 0.0)] }]);
+        // > insert path p_s = {s} into B with cost 0
+        let mut todo: Vec<Path<'g>> = Vec::from([Path { hops: vec![(src, 0.0)] }]);
+        // > while B is not empty and count_t < K:
         while !todo.is_empty() && *shortest_to.entry(dst).or_default() < k {
-            let path: Path<'g> = todo.pop_first().unwrap();
+            // > let p_u be the shortest cost path in B with cost C
+            // > B = B - {p_u},
+            let path: Path<'g> = todo.pop().unwrap();
+            let cost: f64 = path.cost();
             let end: &str = path.end().unwrap();
 
-            // Note how many paths we found to this node
+            // > count_u = count_u + 1
             *shortest_to.entry(end).or_default() += 1;
-            // Also mark it as shortest if the end is our destination
+
+            // > if u = t then P = P \cup {p_u}
             if dst == end {
                 shortest.push(path.clone());
             }
 
-            // Next, we find next candidates
+            // > if count_u \leq K then
             if *shortest_to.get(end).unwrap() <= k {
-                for e in graph.edges.values() {
-                    // Find the next hope to take _if_ this is the correct edge
-                    let mut hops: Vec<(&'g str, f64)> = path.hops.clone();
-                    if e.left.as_str() == end && e.right.as_str() != end {
-                        hops.push((e.right.as_str(), path.cost() + e.cost));
+                // > \circ for each vertex v adjacent to u:
+                'edges: for e in graph.edges.values() {
+                    // > - let p_v be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path p_u
+                    let neighbour: &str = if e.left.as_str() == end && e.right.as_str() != end {
+                        e.right.as_str()
                     } else if e.left.as_str() != end && e.right.as_str() == end {
-                        hops.push((e.left.as_str(), path.cost() + e.cost));
+                        e.left.as_str()
                     } else {
                         continue;
-                    }
+                    };
+                    let new_cost: f64 = cost + e.cost;
+                    let mut new_path: Path<'g> = path.clone();
+                    new_path.hops.push((neighbour, cost + e.cost));
 
-                    // Add it but ordered by cost
-                    todo.insert(Path { hops });
+                    // > - insert p_v into B
+                    // NOTE: We do this ordered
+                    for i in 0..todo.len() {
+                        // Insert it after the largest one
+                        if todo[i].cost() > new_cost {
+                            continue;
+                        }
+                        todo.insert(i, new_path);
+                        continue 'edges;
+                    }
+                    todo.push(new_path);
                 }
             }
         }
 
-        // OK, done
+        // > return P
         shortest
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    23 Jul 2024, 01:48:46
+//    24 Jul 2024, 02:12:01
 //  Auto updated?
 //    Yes
 //
@@ -21,14 +21,15 @@ use clap::Parser;
 use comfy_table::Table;
 use error_trace::trace;
 use humanlog::{DebugMode, HumanLogger};
-use ksp::{Algorithm, Path, Routing};
+use ksp::{Algorithm, KShortestPath as _, Path, Pipeline};
 use ksp_bench::parser::{self};
 use ksp_bench::tests::TestCase;
-use ksp_graph::Graph;
+use ksp_graph::{Graph, GraphFormat};
 use log::{debug, error, info, warn};
 
 
 /***** ARGUMENTS *****/
+/// Defines the binary arguments.
 #[derive(Clone, Debug, Parser)]
 struct Arguments {
     /// Whether to run with additional log statements.
@@ -38,6 +39,13 @@ struct Arguments {
     #[clap(long, global = true, help = "If given, shows TRACE-level log statements. Implies '--debug'.")]
     trace: bool,
 
+    /// Any algorithms to run.
+    #[clap(
+        name = "ALGORITHMS",
+        help = "A list of KSP algorithms to benchmark. They are given as pipelines: [PREP->]* ALG [(SSSP)], where 'PREP' is one of 'peek'; 'ALG' is \
+                one of 'wikipedia', 'yen'; and SSSP is one of 'dijkstra'."
+    )]
+    algs: Vec<Pipeline>,
     /// Any specific benchmarks to run.
     #[clap(
         short,
@@ -45,7 +53,7 @@ struct Arguments {
         help = "If given, does not run all benchmarks in the '--benchmark-dir', but instead only the ones with the given name. Adding '.xml' is \
                 optional."
     )]
-    benchmark:     Vec<String>,
+    benchmark: Vec<String>,
     /// Where to find the benchmarks.
     #[clap(short = 'd', long, default_value = "./benchmarks", help = "The directory where the benchmark XML files are read from.")]
     benchmark_dir: PathBuf,
@@ -73,26 +81,33 @@ fn main() {
 
 
     // Resolve to a list of benchmark files
-    let mut files: Vec<(String, PathBuf)> = Vec::new();
+    let mut files: Vec<(String, PathBuf, GraphFormat)> = Vec::new();
     if !args.benchmark.is_empty() {
         // Resolve the entries
         for entry in args.benchmark {
-            let mut path: PathBuf = args.benchmark_dir.join(&entry);
-            if !path.exists() {
-                // Re-try with XML
-                if let Some(old) = path.file_name() {
-                    let mut old = old.to_os_string();
-                    old.push(".xml");
-                    path.set_file_name(old);
-                } else {
-                    panic!("Should never have no filename for generated path '{}' from entry '{}'", path.display(), entry);
-                }
+            let entry_path: PathBuf = PathBuf::from(&entry);
+            if entry_path.exists() {
+                let entry_name: String = entry_path.file_name().map(|n| n.to_string_lossy().into()).unwrap_or(entry);
+                let fmt: GraphFormat = if entry_name.ends_with(".json") { GraphFormat::Json } else { GraphFormat::SNDLibXml };
+                files.push((entry_name, entry_path, fmt));
+            } else {
+                let mut path: PathBuf = args.benchmark_dir.join(&entry);
                 if !path.exists() {
-                    error!("Benchmark '{}' ({}) does not exist", entry, path.display());
-                    std::process::exit(1);
+                    // Re-try with XML
+                    if let Some(old) = path.file_name() {
+                        let mut old = old.to_os_string();
+                        old.push(".xml");
+                        path.set_file_name(old);
+                    } else {
+                        panic!("Should never have no filename for generated path '{}' from entry '{}'", path.display(), entry);
+                    }
+                    if !path.exists() {
+                        error!("Benchmark '{}' ({}) does not exist", entry, path.display());
+                        std::process::exit(1);
+                    }
                 }
+                files.push((entry, path, GraphFormat::SNDLibXml));
             }
-            files.push((entry, path));
         }
     } else {
         debug!("Finding benchmarks (none specified)...");
@@ -124,20 +139,31 @@ fn main() {
             }
 
             // Add it
-            files.push((entry_path.file_stem().map(|n| n.to_string_lossy().into()).unwrap_or(i.to_string()), entry_path));
+            files.push((entry_path.file_stem().map(|n| n.to_string_lossy().into()).unwrap_or(i.to_string()), entry_path, GraphFormat::SNDLibXml));
         }
     }
 
     // Run them
     debug!("Running {} benchmark(s)", files.len());
     let mut first: bool = true;
-    for (name, file) in files {
+    for (name, file, fmt) in files {
+        info!("Benchmark {:?} ({}) ({:?})", name, file.display(), fmt);
+
         // Open the file and parse the graph & test case
-        let mut graph: Graph = match ksp_graph::sndlib_xml::parse(&file) {
-            Ok(res) => res,
-            Err(err) => {
-                error!("{}", trace!(("Failed to load benchmark '{name}'"), err));
-                std::process::exit(1);
+        let mut graph: Graph = match fmt {
+            GraphFormat::SNDLibXml => match ksp_graph::sndlib_xml::parse(&file) {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("{}", trace!(("Failed to load benchmark '{name}'"), err));
+                    std::process::exit(1);
+                },
+            },
+            GraphFormat::Json => match ksp_graph::json::parse(&file) {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("{}", trace!(("Failed to load benchmark '{name}'"), err));
+                    std::process::exit(1);
+                },
             },
         };
         let tests: Vec<TestCase> = match crate::parser::parse_tests(&file) {
@@ -165,44 +191,10 @@ fn main() {
 
             // Benchmark the test
             let mut min_cost: Vec<Option<Path>> = vec![None; test.k];
-            for alg in Algorithm::all() {
-                let paths: Vec<Path> = match alg {
-                    #[cfg(feature = "peek")]
-                    Algorithm::Peek => {
-                        // Run the test and time it
-                        let start = Instant::now();
-                        let paths: Vec<Path> = ksp::peek::PeekKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
-                        let time = start.elapsed();
-
-                        // Store that
-                        results.entry(&test.id).or_default().insert(Algorithm::Peek, time);
-                        paths
-                    },
-                    #[cfg(feature = "wikipedia")]
-                    Algorithm::Wikipedia => {
-                        // Run the test and time it
-                        let start = Instant::now();
-                        let paths: Vec<Path> = ksp::wikipedia::WikipediaKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
-                        let time = start.elapsed();
-
-                        // Store that
-                        results.entry(&test.id).or_default().insert(Algorithm::Wikipedia, time);
-                        paths
-                    },
-                    #[cfg(feature = "yen")]
-                    Algorithm::Yen => {
-                        // Run the test and time it
-                        let start = Instant::now();
-                        let paths: Vec<Path> = ksp::yen::YenKSP.k_shortest_paths(&graph, &test.source, &test.target, test.k);
-                        let time = start.elapsed();
-
-                        // Store that
-                        results.entry(&test.id).or_default().insert(Algorithm::Yen, time);
-                        paths
-                    },
-                    #[cfg(not(any(feature = "peek", feature = "wikipedia", feature = "yen")))]
-                    _ => unreachable!(),
-                };
+            for pip in args.algs {
+                let mut g: Graph = graph.clone();
+                let (paths, profile): (Vec<Path>, PipelineProfile) =
+                    pip.k_shortest_paths_profiled(&mut g, test.source.as_str(), test.target.as_str(), test.k);
 
                 // Verify correctness of the paths
                 for (i, path) in paths.into_iter().enumerate() {
@@ -222,13 +214,13 @@ fn main() {
                     if path.hops.first().unwrap().0 != test.source.as_str() {
                         panic!(
                             "Benchmark '{}' failed for {:?}: path doesn't start at test source ({})\n\nPath: {:?}",
-                            test.id, alg, test.source, path
+                            test.id, pip, test.source, path
                         );
                     }
                     if path.hops.last().unwrap().0 != test.target.as_str() {
                         panic!(
                             "Benchmark '{}' failed for {:?}: path doesn't start at test target ({})\n\nPath: {:?}",
-                            test.id, alg, test.target, path
+                            test.id, pip, test.target, path
                         );
                     }
 
@@ -238,7 +230,7 @@ fn main() {
                             panic!(
                                 "Benchmark '{}' failed for {:?}: path not shortest (got {}, previous alg got {})\n\nPath:\n{}\n\nPrev path:\n{}\n",
                                 test.id,
-                                alg,
+                                pip,
                                 path.cost(),
                                 prev.cost(),
                                 path,
