@@ -1,0 +1,13 @@
+{
+  "name": "PeeK-Yen-Dijkstra",
+  "steps": [
+    {
+      "kind": "transform",
+      "trans": "peek<dijkstra>"
+    },
+    {
+      "kind": "k_shortest_path",
+      "ksp": "yen<dijksta>"
+    }
+  ]
+}

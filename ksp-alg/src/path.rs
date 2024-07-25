@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 02:05:23
 //  Last edited:
-//    23 Jul 2024, 01:45:54
+//    26 Jul 2024, 00:57:26
 //  Auto updated?
 //    Yes
 //
@@ -15,6 +15,8 @@
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::hash::{Hash, Hasher};
+
+use arrayvec::ArrayString;
 
 
 /***** LIBRARY *****/
@@ -100,6 +102,22 @@ impl<'g> Path<'g> {
     /// The cost of the entire path.
     #[inline]
     pub fn cost(&self) -> f64 { self.hops.last().map(|(_, c)| *c).unwrap_or(0.0) }
+
+
+
+    /// Returns a borrowed version of the internal path.
+    ///
+    /// # Returns
+    /// A [`Path`] with lifetimes to this path.
+    #[inline]
+    pub fn borrow(&self) -> Path { Path { hops: self.hops.iter().map(|(i, c)| (*i, *c)).collect() } }
+
+    /// Returns an owned version of the internal path.
+    ///
+    /// # Returns
+    /// An [`OwnedPath`] without lifetimes.
+    #[inline]
+    pub fn to_owned(&self) -> OwnedPath { OwnedPath { hops: self.hops.iter().map(|(i, c)| (ArrayString::from(i).unwrap(), *c)).collect() } }
 }
 
 impl<'g> Display for Path<'g> {
@@ -148,6 +166,90 @@ impl<'g> PartialOrd for Path<'g> {
     }
 }
 impl<'g> Ord for Path<'g> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering { self.partial_cmp(other).unwrap() }
+}
+
+
+
+
+/// Defines an _owned_ path between two nodes.
+#[derive(Clone, Debug)]
+pub struct OwnedPath {
+    /// The hops of the path.
+    pub hops: Vec<(ArrayString<64>, f64)>,
+}
+impl OwnedPath {
+    /// Returns the endpoint of this path, if any.
+    ///
+    /// # Returns
+    /// A reference to the ID of the endpoint of the path.
+    #[inline]
+    pub fn end(&self) -> Option<&str> { self.hops.last().map(|(n, _)| n.as_str()) }
+
+    /// Returns the cost of this path.
+    ///
+    /// # Returns
+    /// The cost of the entire path.
+    #[inline]
+    pub fn cost(&self) -> f64 { self.hops.last().map(|(_, c)| *c).unwrap_or(0.0) }
+
+
+
+    /// Returns a borrowed version of the internal path.
+    ///
+    /// # Returns
+    /// A [`Path`] with lifetimes to this path.
+    #[inline]
+    pub fn borrow(&self) -> Path { Path { hops: self.hops.iter().map(|(i, c)| (i.as_str(), *c)).collect() } }
+}
+
+impl Display for OwnedPath {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter) -> FResult {
+        let mut first: bool = true;
+        for (node, cost) in &self.hops {
+            if first {
+                first = false;
+            } else {
+                write!(f, " -{cost}-> ")?;
+            }
+            write!(f, "{node}")?;
+        }
+        Ok(())
+    }
+}
+
+impl Eq for OwnedPath {}
+impl Hash for OwnedPath {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for (hop, _) in &self.hops {
+            hop.hash(state)
+        }
+    }
+}
+impl PartialEq for OwnedPath {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        if self.hops.len() != other.hops.len() {
+            return false;
+        }
+        for i in 0..self.hops.len() {
+            if self.hops[i].0 != other.hops[i].0 {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+impl PartialOrd for OwnedPath {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.hops.last().map(|(_, cost)| *cost).unwrap_or(0.0).partial_cmp(other.hops.last().map(|(_, cost)| cost).unwrap_or(&0.0))
+    }
+}
+impl Ord for OwnedPath {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering { self.partial_cmp(other).unwrap() }
 }

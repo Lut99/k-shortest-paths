@@ -4,7 +4,7 @@
 //  Created:
 //    25 Jul 2024, 20:21:42
 //  Last edited:
-//    25 Jul 2024, 20:37:42
+//    26 Jul 2024, 01:23:37
 //  Auto updated?
 //    Yes
 //
@@ -20,8 +20,6 @@ pub mod dijkstra;
 use std::collections::HashMap;
 
 use ksp_graph::Graph;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use crate::utils::parsable_enum_impl;
 
@@ -29,8 +27,7 @@ use crate::utils::parsable_enum_impl;
 /***** LIBRARY *****/
 parsable_enum_impl! {
     /// Overview of all distance colouring algorithms in the libary.
-    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub enum Distance {
         /// Arguably the most famous one from Dijkstra (\[2\]).
         Dijkstra { "dijkstra" => Self::Dijkstra },

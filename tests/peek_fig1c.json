@@ -1,0 +1,83 @@
+{
+    "bidirectional": false,
+    "nodes": {
+        "f": {
+            "pos": [0.0, -100.0]
+        },
+        "g": {
+            "pos": [100.0, -100.0]
+        },
+        "j": {
+            "pos": [5.0, -200.0]
+        },
+        "l": {
+            "pos": [100.0, -200.0]
+        },
+        "q": {
+            "pos": [100.0, -250.0]
+        },
+        "s": {
+            "pos": [50.0, -50.0]
+        },
+        "t": {
+            "pos": [50.0, -250.0]
+        }
+    },
+    "edges": {
+        "s-f": {
+            "left":  "s",
+            "right": "f",
+            "cost":  8.0
+        },
+        "s-g": {
+            "left":  "s",
+            "right": "g",
+            "cost":  4.0
+        },
+        "f-g": {
+            "left":  "f",
+            "right": "g",
+            "cost":  11.0
+        },
+        "g-f": {
+            "left":  "g",
+            "right": "f",
+            "cost":  11.0
+        },
+        "f-j": {
+            "left":  "f",
+            "right": "j",
+            "cost":  1.0
+        },
+        "g-l": {
+            "left":  "g",
+            "right": "l",
+            "cost":  4.0
+        },
+        "j-l": {
+            "left":  "j",
+            "right": "l",
+            "cost":  8.0
+        },
+        "j-t": {
+            "left":  "j",
+            "right": "t",
+            "cost":  2.0
+        },
+        "l-t": {
+            "left":  "l",
+            "right": "t",
+            "cost":  4.0
+        },
+        "l-q": {
+            "left":  "l",
+            "right": "q",
+            "cost":  3.0
+        },
+        "q-t": {
+            "left":  "q",
+            "right": "t",
+            "cost":  3.0
+        }
+    }
+}

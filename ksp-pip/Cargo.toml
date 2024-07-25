@@ -6,8 +6,24 @@ repository.workspace = true
 description = "Defines pipelines for executing KSP algorithms (and associates) end-to-end."
 
 
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
+[[example]]
+name = "generate-pipelines"
+path = "examples/generate.rs"
 
-ksp-alg = { path = "../ksp-alg" }
+
+[dependencies]
+arrayvec = { version = "0.7", features = ["serde"] }
+image = { version = "0.25", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+show-image = { version = "0.14", features = ["image"] }
+
+ksp-alg = { path = "../ksp-alg", features = ["serde"] }
+ksp-graph = { path = "../ksp-graph", features = ["serde"] }
 ksp-vis = { path = "../ksp-vis" }
+
+
+[dev-dependencies]
+error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
+humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
+log = "0.4"
+serde_json = "1.0"

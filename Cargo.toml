@@ -4,6 +4,7 @@ repository = "https://github.com/Lut99/k-shortest-paths"
 
 
 [workspace]
+resolver = "2"
 members = [
     "ksp-alg",
     "ksp-bench",

@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 01:44:45
 //  Last edited:
-//    25 Jul 2024, 20:11:38
+//    26 Jul 2024, 01:23:28
 //  Auto updated?
 //    Yes
 //
@@ -18,8 +18,6 @@ pub mod yen;
 
 // Imports
 use ksp_graph::Graph;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use crate::sssp::Sssp;
 use crate::utils::parsable_enum_impl;
@@ -29,8 +27,7 @@ use crate::Path;
 /***** LIBRARY *****/
 parsable_enum_impl! {
     /// Overview of all K-Shortest path algorithms in the libary.
-    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub enum Ksp {
         Wikipedia { "wikipedia" => Self::Wikipedia },
         Yen(Sssp) { "yen<dijksta>" => Self::Yen(Sssp::Dijkstra) },

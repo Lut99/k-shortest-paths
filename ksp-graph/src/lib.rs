@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 23:35:02
 //  Last edited:
-//    25 Jul 2024, 22:09:36
+//    25 Jul 2024, 23:46:13
 //  Auto updated?
 //    Yes
 //
@@ -17,7 +17,6 @@
 pub mod json;
 #[cfg(feature = "sndlib_xml")]
 pub mod sndlib_xml;
-
 // Imports
 use std::collections::HashMap;
 use std::error::Error;
@@ -25,6 +24,8 @@ use std::fmt::{Display, Formatter, Result as FResult};
 use std::str::FromStr;
 
 use arrayvec::ArrayString;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 
 /***** ERRORS *****/
@@ -47,6 +48,7 @@ impl Error for GraphFormatParseError {}
 /***** AUXILLARY *****/
 /// Lists all available graph formats we can parse.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum GraphFormat {
     /// A directly serialized [`Graph`] as JSON.
     #[cfg(feature = "json")]
@@ -97,6 +99,34 @@ pub struct Graph {
     pub nodes: HashMap<ArrayString<64>, Node>,
     /// The edges in the graph.
     pub edges: HashMap<ArrayString<64>, Edge>,
+}
+impl Graph {
+    /// Returns true if the graph is the same as another graph structurally.
+    ///
+    /// Does not compare costs.
+    ///
+    /// # Arguments
+    /// - `other`: The other [`Graph`] to compare with.
+    ///
+    /// # Returns
+    /// True if they have the same nodes and links, or false otherwise.
+    #[inline]
+    pub fn same_structure(&self, other: &Self) -> bool {
+        if self.nodes.len() != other.nodes.len() || self.edges.len() != other.edges.len() {
+            return false;
+        }
+        for node in self.nodes.values() {
+            if !other.nodes.contains_key(&node.id) {
+                return false;
+            }
+        }
+        for edge in self.edges.values() {
+            if !other.edges.contains_key(&edge.id) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 

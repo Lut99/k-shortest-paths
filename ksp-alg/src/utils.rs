@@ -4,7 +4,7 @@
 //  Created:
 //    20 Jul 2024, 01:05:09
 //  Last edited:
-//    25 Jul 2024, 20:35:34
+//    26 Jul 2024, 01:34:15
 //  Auto updated?
 //    Yes
 //
@@ -67,6 +67,50 @@ macro_rules! parsable_enum_impl {
                         raw => Err([<Unknown $name Error>] { unknown: raw.into() }),
                     }
                 }
+            }
+        }
+        #[cfg(feature = "serde")]
+        impl<'de> ::serde::Deserialize<'de> for $name {
+            #[inline]
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: ::serde::de::Deserializer<'de>,
+            {
+                /// Visitor for the parent enum.
+                struct FromStrVisitor;
+                impl<'de> ::serde::de::Visitor<'de> for FromStrVisitor {
+                    type Value = $name;
+
+                    #[inline]
+                    fn expecting(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                        write!(f, concat!("one of ", $($("'", $strings, "', "),+),*))
+                    }
+
+                    #[inline]
+                    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                    where
+                        E: ::serde::de::Error
+                    {
+                        match <Self::Value as ::std::str::FromStr>::from_str(s) {
+                            Ok(value) => Ok(value),
+                            Err(err) => Err(E::custom(err)),
+                        }
+                    }
+                }
+
+                // Also use it
+                deserializer.deserialize_str(FromStrVisitor)
+            }
+        }
+        #[cfg(feature = "serde")]
+        impl ::serde::Serialize for $name {
+            #[inline]
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: ::serde::ser::Serializer,
+            {
+                $($(if (*self == $gen) { return serializer.serialize_str($strings); })+)*
+                ::std::unreachable!()
             }
         }
     };

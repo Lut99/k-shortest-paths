@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    25 Jul 2024, 23:06:26
+//    25 Jul 2024, 23:38:37
 //  Auto updated?
 //    Yes
 //
@@ -13,6 +13,7 @@
 //
 
 use std::cmp::{max, min};
+use std::collections::HashMap;
 
 use image::{GenericImageView, Pixel, Rgb, Rgba, RgbaImage};
 use ksp_graph::Graph;
@@ -355,7 +356,22 @@ impl Default for Options {
 ///
 /// # Returns
 /// A raw [`RgbaImage`] containing the rendered graph.
+#[inline]
 pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
+    let labels: HashMap<&str, String> = graph.nodes.keys().map(|id| (id.as_str(), id.to_string())).collect();
+    render_graph_with_labels(graph, &labels, opts)
+}
+
+/// Renders a given [`Graph`] to an image.
+///
+/// # Arguments
+/// - `graph`: The graph to render.
+/// - `labels`: A map from nodes to labels that shows what to annotate each node with.
+/// - `opts`: An [`Options`] struct used to configure rendering.
+///
+/// # Returns
+/// A raw [`RgbaImage`] containing the rendered graph.
+pub fn render_graph_with_labels(graph: &Graph, labels: &HashMap<&str, String>, opts: Options) -> RgbaImage {
     // Find the logical boundaries in the graph
     let mut boundaries: (Option<f64>, Option<f64>, Option<f64>, Option<f64>) = (None, None, None, None);
     for node in graph.nodes.values() {
@@ -408,7 +424,7 @@ pub fn render_graph(graph: &Graph, opts: Options) -> RgbaImage {
     }
     // Draw the labels to the nodes
     for node in graph.nodes.values() {
-        draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), node.id.as_str(), None, true);
+        draw_label(&mut img, logic_to_pixels(node.pos, boundaries, opts.dims), labels.get(node.id.as_str()).unwrap(), None, true);
     }
 
     // Done

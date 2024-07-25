@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 01:48:03
 //  Last edited:
-//    25 Jul 2024, 20:37:28
+//    26 Jul 2024, 01:23:24
 //  Auto updated?
 //    Yes
 //
@@ -17,8 +17,6 @@ pub mod peek;
 
 // Imports
 use ksp_graph::Graph;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use crate::dist::Distance;
 use crate::utils::parsable_enum_impl;
@@ -27,8 +25,7 @@ use crate::utils::parsable_enum_impl;
 /***** LIBRARY *****/
 parsable_enum_impl! {
     /// Overview of all graph transforming algorithms in the libary.
-    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub enum Transformer {
         PeeK(Distance) { "peek<dijkstra>" => Self::PeeK(Distance::Dijkstra) },
     }

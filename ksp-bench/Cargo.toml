@@ -23,9 +23,12 @@ error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
 humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
 log = "0.4"
 quick-xml = { version = "0.36", features = ["serialize"] }
+serde_json = "1.0"
+show-image = { version = "0.14", features = ["macros"] }
 
 ksp-alg = { path = "../ksp-alg" }
 ksp-graph = { path = "../ksp-graph", features = ["json", "sndlib_xml"] }
+ksp-pip = { path = "../ksp-pip" }
 
 
 [features]

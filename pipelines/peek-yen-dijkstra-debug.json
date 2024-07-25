@@ -1,0 +1,25 @@
+{
+  "name": "PeeK-Yen-Dijkstra (DEBUG)",
+  "steps": [
+    {
+      "kind": "visualize",
+      "labels": {
+        "kind": "identifiers"
+      }
+    },
+    {
+      "kind": "transform",
+      "trans": "peek<dijkstra>"
+    },
+    {
+      "kind": "visualize",
+      "labels": {
+        "kind": "identifiers"
+      }
+    },
+    {
+      "kind": "k_shortest_path",
+      "ksp": "yen<dijksta>"
+    }
+  ]
+}

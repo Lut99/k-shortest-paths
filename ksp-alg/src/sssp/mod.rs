@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:41:28
 //  Last edited:
-//    25 Jul 2024, 20:04:31
+//    26 Jul 2024, 01:23:32
 //  Auto updated?
 //    Yes
 //
@@ -17,8 +17,6 @@ pub mod dijkstra;
 
 // Imports
 use ksp_graph::Graph;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use crate::path::Path;
 use crate::utils::parsable_enum_impl;
@@ -27,8 +25,7 @@ use crate::utils::parsable_enum_impl;
 /***** LIBRARY *****/
 parsable_enum_impl! {
     /// Overview of all SSSP algorithms in the libary.
-    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub enum Sssp {
         /// Arguably the most famous one from Dijkstra ([2]).
         Dijkstra { "dijkstra" => Self::Dijkstra },

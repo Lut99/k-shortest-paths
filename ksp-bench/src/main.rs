@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    25 Jul 2024, 00:16:34
+//    26 Jul 2024, 01:36:26
 //  Auto updated?
 //    Yes
 //
@@ -14,17 +14,19 @@
 
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fs::{self, DirEntry, ReadDir};
+use std::fs::{self, DirEntry, File, ReadDir};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use clap::Parser;
 use comfy_table::Table;
 use error_trace::trace;
 use humanlog::{DebugMode, HumanLogger};
-use ksp::{Path, Pipeline, PipelineProfile};
+use ksp_alg::OwnedPath;
 use ksp_bench::parser::{self};
 use ksp_bench::tests::TestCase;
 use ksp_graph::{Graph, GraphFormat};
+use ksp_pip::Pipeline;
 use log::{debug, error, info, warn};
 
 
@@ -40,12 +42,8 @@ struct Arguments {
     trace: bool,
 
     /// Any algorithms to run.
-    #[clap(
-        name = "ALGORITHMS",
-        help = "A list of KSP algorithms to benchmark. They are given as pipelines: [PREP->]* ALG [(SSSP)], where 'PREP' is one of 'peek'; 'ALG' is \
-                one of 'wikipedia', 'yen'; and SSSP is one of 'dijkstra'."
-    )]
-    algs: Vec<Pipeline>,
+    #[clap(name = "PIPELINES", help = "A list of KSP pipelines to benchmark. They are given as JSON files.")]
+    pips: Vec<PathBuf>,
     /// Any specific benchmarks to run.
     #[clap(
         short,
@@ -68,6 +66,7 @@ struct Arguments {
 
 
 /***** ENTRYPOINT *****/
+#[show_image::main]
 fn main() {
     // Parse arguments
     let args = Arguments::parse();
@@ -77,6 +76,33 @@ fn main() {
         eprintln!("WARNING: Failed to setup logger: {err} (no logging for this session)");
     }
     info!("{} -  v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
+
+
+
+    // Parse the pipelines
+    let mut pipelines: Vec<Pipeline> = Vec::with_capacity(args.pips.len());
+    for pip in args.pips {
+        // Open the file
+        let handle: File = match File::open(&pip) {
+            Ok(handle) => handle,
+            Err(err) => {
+                error!("{}", trace!(("Failed to open pipeline file '{}'", pip.display()), err));
+                std::process::exit(1);
+            },
+        };
+
+        // Parse as JSON
+        let pip: Pipeline = match serde_json::from_reader(handle) {
+            Ok(pip) => pip,
+            Err(err) => {
+                error!("{}", trace!(("Failed to read/parse pipeline file '{}'", pip.display()), err));
+                std::process::exit(1);
+            },
+        };
+
+        // Store
+        pipelines.push(pip);
+    }
 
 
 
@@ -145,6 +171,8 @@ fn main() {
         }
     }
 
+
+
     // Run them
     debug!("Running {} benchmark(s)", files.len());
     let mut first: bool = true;
@@ -187,37 +215,53 @@ fn main() {
 
 
         // Now run some routing algorithm on all tests
-        let mut results: HashMap<&str, HashMap<Pipeline, PipelineProfile>> = HashMap::new();
+        let mut results: HashMap<&str, HashMap<Pipeline, Duration>> = HashMap::new();
         for (i, test) in tests.iter().enumerate() {
             // Benchmark the test
             let mut min_cost: Vec<Option<(String, f64)>> = vec![None; test.k];
-            for pip in &args.algs {
-                debug!("Benchmarking {} for test '{}' ({}/{})...", pip, test.id, i + 1, tests.len());
+            for pip in &pipelines {
+                debug!("Benchmarking {} for test '{}' ({}/{})...", pip.name, test.id, i + 1, tests.len());
                 let mut g: Graph = graph.clone();
-                let (paths, profile): (Vec<Path>, PipelineProfile) =
-                    pip.k_shortest_paths_profiled(&mut g, test.source.as_str(), test.target.as_str(), test.k);
-                results.entry(test.id.as_str()).or_default().insert(pip.clone(), profile);
+                let start: Instant = Instant::now();
+                let (paths, time): (Option<Vec<OwnedPath>>, Duration) =
+                    match pip.k_shortest(&mut g, test.source.as_str(), test.target.as_str(), test.k) {
+                        Ok(paths) => {
+                            let time: Duration = start.elapsed();
+                            (paths, time)
+                        },
+                        Err(err) => {
+                            error!("{}", trace!(("Failed to run pipeline '{}'", pip.name), err));
+                            std::process::exit(1);
+                        },
+                    };
+                results.entry(test.id.as_str()).or_default().insert(pip.clone(), time);
 
                 // Verify correctness of the paths
-                for (i, path) in paths.into_iter().enumerate() {
+                for (i, path) in paths.into_iter().flat_map(Vec::into_iter).enumerate() {
                     // Ensure all entries are connected
                     'hops: for i in 1..path.hops.len() {
-                        let n1: &str = path.hops[i - 1].0;
-                        let n2: &str = path.hops[i].0;
+                        let n1: &str = path.hops[i - 1].0.as_str();
+                        let n2: &str = path.hops[i].0.as_str();
                         for edge in graph.edges.values() {
                             if (edge.left.as_str() == n1 && edge.right.as_str() == n2) || (edge.left.as_str() == n2 && edge.right.as_str() == n1) {
                                 continue 'hops;
                             }
                         }
-                        panic!("Benchmark '{}' failed for {}: not all paths are connected\n\nPath: {:?}", test.id, pip, path);
+                        panic!("Benchmark '{}' failed for {}: not all paths are connected\n\nPath: {:?}", test.id, pip.name, path);
                     }
 
                     // Ensure the path connects the test's endpoints
-                    if path.hops.first().unwrap().0 != test.source.as_str() {
-                        panic!("Benchmark '{}' failed for {}: path doesn't start at test source ({})\n\nPath: {:?}", test.id, pip, test.source, path);
+                    if path.hops.first().unwrap().0.as_str() != test.source.as_str() {
+                        panic!(
+                            "Benchmark '{}' failed for {}: path doesn't start at test source ({})\n\nPath: {:?}",
+                            test.id, pip.name, test.source, path
+                        );
                     }
-                    if path.hops.last().unwrap().0 != test.target.as_str() {
-                        panic!("Benchmark '{}' failed for {}: path doesn't start at test target ({})\n\nPath: {:?}", test.id, pip, test.target, path);
+                    if path.hops.last().unwrap().0.as_str() != test.target.as_str() {
+                        panic!(
+                            "Benchmark '{}' failed for {}: path doesn't start at test target ({})\n\nPath: {:?}",
+                            test.id, pip.name, test.target, path
+                        );
                     }
 
                     // Check whether the test agrees with the minimum
@@ -226,7 +270,7 @@ fn main() {
                             panic!(
                                 "Benchmark '{}' failed for {}: path not shortest (got {}, previous alg got {})\n\nPath:\n{}\n\nPrev path:\n{}\n",
                                 test.id,
-                                pip,
+                                pip.name,
                                 path.cost(),
                                 prev.1,
                                 path,
@@ -243,12 +287,16 @@ fn main() {
         // Format the results in some nice table
         if !args.csv {
             let mut table = Table::new();
-            table.set_header(["Benchmark".to_string(), "Executed test".to_string()].into_iter().chain(args.algs.iter().map(|p| p.to_string())));
+            table.set_header(
+                ["Benchmark".to_string(), "Executed test".to_string()]
+                    .into_iter()
+                    .chain(pipelines.iter().map(|p| format!("{} duration (ms)", p.name))),
+            );
             for (test, times) in results {
                 table.add_row(
                     [name.to_string(), test.to_string()]
                         .into_iter()
-                        .chain(args.algs.iter().map(|p| ((times.get(p).unwrap().alg.as_nanos() as f64) / 1000000.0).to_string())),
+                        .chain(pipelines.iter().map(|p| ((times.get(p).unwrap().as_nanos() as f64) / 1000000.0).to_string())),
                 );
             }
             println!("{table}");
@@ -256,8 +304,8 @@ fn main() {
             // Print the header
             if first {
                 print!("Benchmark,Executed test");
-                for pip in args.algs.iter() {
-                    print!(",{pip} duration (ms)");
+                for pip in pipelines.iter() {
+                    print!(",{} duration (ms)", pip.name);
                 }
                 println!();
             }
@@ -265,7 +313,7 @@ fn main() {
             // Print the rows
             for (test, times) in results {
                 print!("{name},{test}");
-                for time in args.algs.iter().map(|p| ((times.get(p).unwrap().alg.as_nanos() as f64) / 1000000.0)) {
+                for time in pipelines.iter().map(|p| ((times.get(p).unwrap().as_nanos() as f64) / 1000000.0)) {
                     print!(",{time}");
                 }
                 println!();

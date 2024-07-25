@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:54:32
 //  Last edited:
-//    25 Jul 2024, 00:08:56
+//    26 Jul 2024, 01:39:45
 //  Auto updated?
 //    Yes
 //
@@ -245,6 +245,16 @@ pub fn parse(path: impl AsRef<Path>) -> Result<Graph, Error> {
             link.routing_cost = Some((dx * dx + dy * dy).sqrt());
         }
     }
+
+    // Make sure all links are both ways
+    let mut new_links: Vec<XmlLink> = Vec::with_capacity(bench.network_structure.links.links.len());
+    for link in &bench.network_structure.links.links {
+        // Add the reverse
+        let id: ArrayString<64> =
+            ArrayString::from(&format!("{}-REV", link.id)).unwrap_or_else(|err| panic!("Too long identifier '{}-REV': {err}", link.id));
+        new_links.push(XmlLink { id, source: link.target.clone(), target: link.source.clone(), routing_cost: link.routing_cost });
+    }
+    bench.network_structure.links.links.extend(new_links);
 
     // Convert it to the standardized Graph.
     Ok(Graph {
