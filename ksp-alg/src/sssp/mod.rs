@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:41:28
 //  Last edited:
-//    25 Jul 2024, 01:12:58
+//    25 Jul 2024, 20:04:31
 //  Auto updated?
 //    Yes
 //
@@ -14,71 +14,31 @@
 
 // Declarations
 pub mod dijkstra;
-pub mod profiled;
 
 // Imports
-use std::error::Error;
-use std::fmt::{Display, Formatter, Result as FResult};
-use std::str::FromStr;
-
 use ksp_graph::Graph;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::path::Path;
-
-
-/***** ERRORS *****/
-/// Defines the error thrown when an unknown [`Sssp`] was parsed.
-#[derive(Debug)]
-pub struct UnknownSsspError {
-    /// The raw string that wasn't a recongized SSSP algorithm.
-    pub unknown: String,
-}
-impl Display for UnknownSsspError {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult { write!(f, "Unknown SSSP algorithm '{}'", self.unknown) }
-}
-impl Error for UnknownSsspError {}
-
-
-
+use crate::utils::parsable_enum_impl;
 
 
 /***** LIBRARY *****/
-/// Overview of all SSSP algorithms in the libary.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-pub enum Sssp {
-    /// Arguably the most famous one from Dijkstra ([2]).
-    Dijkstra,
-}
-impl Sssp {
-    /// Returns all implemented SSSP algorithms.
-    ///
-    /// # Returns
-    /// A static list of the implemented SSSP algorithms.
-    #[inline]
-    pub const fn all() -> &'static [Self] { &[Self::Dijkstra] }
-}
-impl FromStr for Sssp {
-    type Err = UnknownSsspError;
-
-    #[inline]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "dijkstra" => Ok(Self::Dijkstra),
-            other => Err(UnknownSsspError { unknown: other.into() }),
-        }
+parsable_enum_impl! {
+    /// Overview of all SSSP algorithms in the libary.
+    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+    pub enum Sssp {
+        /// Arguably the most famous one from Dijkstra ([2]).
+        Dijkstra { "dijkstra" => Self::Dijkstra },
     }
 }
 
 
 
-
-
-/***** LIBRARY *****/
-/// Defines an abstraction over various algorithms.
+/// Defines an abstraction over algorithms that compute a single shortest path between two nodes in
+/// a graph.
 pub trait Routing {
     /// Finds the shortest paths from one node to another.
     ///
@@ -88,15 +48,9 @@ pub trait Routing {
     /// - `dst`: The destination node to find a path to.
     ///
     /// # Returns
-    /// The shortest paths found.
+    /// The shortest path found.
     ///
     /// # Panics
     /// This function is allowed to panic if the given `src` or `dst` are not in the given `graph` or they are not connected.
-    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g>;
-}
-
-// Pointer-like impls
-impl<'a, T: Routing> Routing for &'a mut T {
-    #[inline]
-    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> { <T as Routing>::shortest(self, graph, src, dst) }
+    fn shortest<'g>(graph: &'g Graph, src: &str, dst: &str) -> Path<'g>;
 }

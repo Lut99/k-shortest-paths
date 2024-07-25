@@ -1,0 +1,185 @@
+{
+    "bidirectional": false,
+    "nodes": {
+        "a": {
+            "pos": [0.0, 0.0]
+        },
+        "b": {
+            "pos": [100.0, 0.0]
+        },
+        "c": {
+            "pos": [200.0, 0.0]
+        },
+        "d": {
+            "pos":[0.0, -50.0]
+        },
+        "e": {
+            "pos": [150.0, -50.0]
+        },
+        "f": {
+            "pos": [0.0, -100.0]
+        },
+        "g": {
+            "pos": [100.0, -100.0]
+        },
+        "i": {
+            "pos": [50.0, -150.0]
+        },
+        "j": {
+            "pos": [5.0, -200.0]
+        },
+        "l": {
+            "pos": [100.0, -200.0]
+        },
+        "o": {
+            "pos": [200.0, -100.0]
+        },
+        "p": {
+            "pos": [0.0, -250.0]
+        },
+        "q": {
+            "pos": [100.0, -250.0]
+        },
+        "r": {
+            "pos": [200.0, -200.0]
+        },
+        "s": {
+            "pos": [50.0, -50.0]
+        },
+        "t": {
+            "pos": [50.0, -250.0]
+        }
+    },
+    "edges": {
+        "a-b": {
+            "left":  "a",
+            "right": "b",
+            "cost":  5.0
+        },
+        "c-b": {
+            "left":  "c",
+            "right": "b",
+            "cost":  1.0
+        },
+        "a-s": {
+            "left":  "a",
+            "right": "s",
+            "cost":  3.0
+        },
+        "d-s": {
+            "left":  "d",
+            "right": "s",
+            "cost":  1.0
+        },
+        "s-e": {
+            "left":  "s",
+            "right": "e",
+            "cost":  3.0
+        },
+        "s-f": {
+            "left":  "s",
+            "right": "f",
+            "cost":  8.0
+        },
+        "s-g": {
+            "left":  "s",
+            "right": "g",
+            "cost":  4.0
+        },
+        "e-o": {
+            "left":  "e",
+            "right": "o",
+            "cost":  8.0
+        },
+        "f-g": {
+            "left":  "f",
+            "right": "g",
+            "cost":  11.0
+        },
+        "g-f": {
+            "left":  "g",
+            "right": "f",
+            "cost":  11.0
+        },
+        "f-p": {
+            "left":  "f",
+            "right": "p",
+            "cost":  1.0
+        },
+        "f-j": {
+            "left":  "f",
+            "right": "j",
+            "cost":  1.0
+        },
+        "f-i": {
+            "left":  "f",
+            "right": "i",
+            "cost":  7.0
+        },
+        "g-l": {
+            "left":  "g",
+            "right": "l",
+            "cost":  4.0
+        },
+        "l-o": {
+            "left":  "l",
+            "right": "o",
+            "cost":  2.0
+        },
+        "o-r": {
+            "left":  "o",
+            "right": "r",
+            "cost":  1.0
+        },
+        "i-j": {
+            "left":  "i",
+            "right": "j",
+            "cost":  3.0
+        },
+        "j-i": {
+            "left":  "j",
+            "right": "i",
+            "cost":  3.0
+        },
+        "i-l": {
+            "left":  "i",
+            "right": "l",
+            "cost":  2.0
+        },
+        "j-l": {
+            "left":  "j",
+            "right": "l",
+            "cost":  8.0
+        },
+        "r-l": {
+            "left":  "r",
+            "right": "l",
+            "cost":  1.0
+        },
+        "j-p": {
+            "left":  "j",
+            "right": "p",
+            "cost":  2.0
+        },
+        "j-t": {
+            "left":  "j",
+            "right": "t",
+            "cost":  2.0
+        },
+        "l-t": {
+            "left":  "l",
+            "right": "t",
+            "cost":  4.0
+        },
+        "l-q": {
+            "left":  "l",
+            "right": "q",
+            "cost":  3.0
+        },
+        "q-t": {
+            "left":  "q",
+            "right": "t",
+            "cost":  3.0
+        }
+    }
+}

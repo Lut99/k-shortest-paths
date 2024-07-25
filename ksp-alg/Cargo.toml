@@ -8,6 +8,8 @@ description = "Defines implemented K-Shortest Path algorithms (and associates)."
 
 [dependencies]
 arrayvec = "0.7"
+log = { version = "0.4", optional = true }
+paste = "1.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 ksp-graph = { path = "../ksp-graph" }
@@ -21,4 +23,5 @@ ksp-graph = { path = "../ksp-graph", features = ["json", "sndlib_xml"] }
 [features]
 default = []
 
+log = ["dep:log"]
 serde = ["dep:serde"]

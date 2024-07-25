@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:06:19
 //  Last edited:
-//    25 Jul 2024, 01:12:22
+//    25 Jul 2024, 20:21:59
 //  Auto updated?
 //    Yes
 //
@@ -14,12 +14,11 @@
 //
 
 // Declare modules
-pub mod color;
+pub mod dist;
 pub mod ksp;
 pub mod path;
 pub mod sssp;
 pub mod trans;
-#[cfg(test)]
 pub mod utils;
 
 // use std::error::Error;

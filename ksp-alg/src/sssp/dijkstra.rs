@@ -4,7 +4,7 @@
 //  Created:
 //    24 Jul 2024, 00:43:39
 //  Last edited:
-//    25 Jul 2024, 01:13:11
+//    25 Jul 2024, 22:06:19
 //  Auto updated?
 //    Yes
 //
@@ -28,14 +28,14 @@ mod tests {
     use crate::utils::load_graph;
 
     #[test]
-    fn test_sssp() {
+    fn test_dijkstra_sssp() {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
-            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Berlin"), path!(crate : g, "Amsterdam" -| "Berlin"));
-            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Dorchester"), path!(crate : g, "Amsterdam" -| "Dorchester"));
-            assert_eq!(DijkstraSSSP.shortest(&g, "Amsterdam", "Chicago"), path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago"));
-            assert_eq!(DijkstraSSSP.shortest(&g, "Berlin", "Chicago"), path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago"));
+            assert_eq!(Dijkstra::shortest(&g, "Amsterdam", "Berlin"), path!(crate : g, "Amsterdam" -| "Berlin"));
+            assert_eq!(Dijkstra::shortest(&g, "Amsterdam", "Dorchester"), path!(crate : g, "Amsterdam" -| "Dorchester"));
+            assert_eq!(Dijkstra::shortest(&g, "Amsterdam", "Chicago"), path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago"));
+            assert_eq!(Dijkstra::shortest(&g, "Berlin", "Chicago"), path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago"));
         }
     }
 }
@@ -52,10 +52,10 @@ mod tests {
 /// # References
 /// \[2\] Dijkstra, E.W. A note on two problems in connexion with graphs.
 /// _Numer. Math._ 1, 269–271 (1959). https://doi.org/10.1007/BF01386390.
-pub struct DijkstraSSSP;
-impl Routing for DijkstraSSSP {
+pub struct Dijkstra;
+impl Routing for Dijkstra {
     #[track_caller]
-    fn shortest<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
+    fn shortest<'g>(graph: &'g Graph, src: &str, dst: &str) -> Path<'g> {
         // Do a depth-first search with the shortest path heuristic
         let mut distances: HashMap<&'g str, (f64, bool)> =
             graph.nodes.keys().map(|id| (id.as_str(), if id.as_str() == src { (0.0, false) } else { (f64::INFINITY, false) })).collect();
@@ -82,8 +82,8 @@ impl Routing for DijkstraSSSP {
                 // Get the neighbour of this node
                 let neigh: &str = if edge.left.as_str() == next && edge.right.as_str() != next {
                     edge.right.as_str()
-                } else if edge.left.as_str() != next && edge.right.as_str() == next {
-                    edge.left.as_str()
+                // } else if edge.left.as_str() != next && edge.right.as_str() == next {
+                //     edge.left.as_str()
                 } else {
                     continue;
                 };

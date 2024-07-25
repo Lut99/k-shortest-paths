@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 00:55:15
 //  Last edited:
-//    25 Jul 2024, 00:09:55
+//    25 Jul 2024, 23:06:26
 //  Auto updated?
 //    Yes
 //
@@ -36,6 +36,63 @@ lazy_static! {
 
 
 /***** HELPER FUNCTIONS *****/
+/// Computes the area of a triangle.
+///
+/// # Arguments
+/// - `p1`: First point of a triangle (given as `(x, y)`).
+/// - `p2`: Second point of a triangle (given as `(x, y)`).
+/// - `p3`: Third point of a triangle (given as `(x, y)`).
+///
+/// # Returns
+/// The area of the triangle.
+#[inline]
+fn area(p1: (f64, f64), p2: (f64, f64), p3: (f64, f64)) -> f64 {
+    return ((p1.0 * (p2.1 - p3.1) + p2.0 * (p3.1 - p1.1) + p3.0 * (p1.1 - p2.1)) / 2.0).abs();
+}
+
+/// Computes the bounding box around a set of points.
+///
+/// # Arguments
+/// - `dims`: The dimension of the image. The bounding-box will be clamped to that.
+/// - `ps`: A set of points to bound.
+///
+/// # Returns
+/// A new bounding box as an `(x1, y1), (x2, y2)` pair s.t. `x1 <= x2` and `y1 <= y2`.
+#[inline]
+fn bb(dims: (u32, u32), ps: impl IntoIterator<Item = (f64, f64)>) -> ((u32, u32), (u32, u32)) {
+    // The bounding box is empty first
+    let mut bb: ((f64, f64), (f64, f64)) = ((f64::INFINITY, f64::INFINITY), (-f64::INFINITY, -f64::INFINITY));
+    for p in ps {
+        if p.0 < bb.0.0 {
+            bb.0.0 = p.0;
+        }
+        if p.1 < bb.0.1 {
+            bb.0.1 = p.1;
+        }
+        if p.0 > bb.1.0 {
+            bb.1.0 = p.0;
+        }
+        if p.1 > bb.1.1 {
+            bb.1.1 = p.1;
+        }
+    }
+
+    // Clamp & round
+    if bb.0.0 < 0.0 {
+        bb.0.0 = 0.0;
+    }
+    if bb.0.1 < 0.0 {
+        bb.0.1 = 0.0;
+    }
+    if bb.1.0 > dims.0 as f64 {
+        bb.1.0 = dims.0 as f64;
+    }
+    if bb.1.1 > dims.1 as f64 {
+        bb.1.1 = dims.1 as f64;
+    }
+    (((bb.0.0 + 0.5) as u32, (bb.0.1 + 0.5) as u32), ((bb.1.0 + 0.5) as u32, (bb.1.1 + 0.5) as u32))
+}
+
 /// Scales a given pair of coordinates to pixels.
 ///
 /// # Arguments
@@ -65,32 +122,63 @@ fn draw_line(img: &mut RgbaImage, pos1: (u32, u32), pos2: (u32, u32)) {
     let (x2, y2): (f64, f64) = (pos2.0 as f64, pos2.1 as f64);
 
     // Ensure the line isn't vertical
-    if pos1.0 == pos2.0 {
+    let (x2, y2): (f64, f64) = if pos1.0 == pos2.0 {
         // It is; simply draw down
         for y in std::cmp::min(pos1.1, pos2.1)..std::cmp::max(pos1.1, pos2.1) {
-            img[(pos1.0, y)] = Rgba([255, 0, 0, 255]);
+            for x in max(pos1.0, 1) - 1..min(pos1.0, img.width() - 2) + 1 {
+                img[(x, y)] = Rgba([0, 0, 255, 255]);
+            }
         }
-        return;
-    }
+        (x2, if y1 <= y2 { y2 - 0.5 } else { y2 + 0.5 })
+    } else {
+        // Find the line slope and then the formula of it as ax + by + c = 0
+        let (dx, dy): (f64, f64) = (x2 - x1, y2 - y1);
+        let a: f64 = dy / dx;
+        let b: f64 = y1 - a * x1;
+        let (a, b, c): (f64, f64, f64) = (-a, 1.0, -b);
+        let ab2: f64 = (a * a + b * b).sqrt();
 
-    // Find the line slope and then the formula of it as ax + by + c = 0
-    let a: f64 = (y2 - y1) / (x2 - x1);
-    let b: f64 = y1 - a * x1;
-    let (a, b, c): (f64, f64, f64) = (-a, 1.0, -b);
-    let ab2: f64 = (a * a + b * b).sqrt();
+        // Now for all the pixels in the bounding box, colour those within the line
+        let bb: ((u32, u32), (u32, u32)) = bb((img.width(), img.height()), [(x1, y1), (x2, y2)]);
+        for y in bb.0.1..=bb.1.1 {
+            for x in bb.0.0..=bb.1.0 {
+                let d: f64 = (a * x as f64 + b * y as f64 + c).abs() / ab2;
 
-    // Create a bounding box around the positions
-    let bb: ((u32, u32), (u32, u32)) =
-        ((std::cmp::min(pos1.0, pos2.0), std::cmp::min(pos1.1, pos2.1)), (std::cmp::max(pos1.0, pos2.0), std::cmp::max(pos1.1, pos2.1)));
+                // Color the pixel if it's within the line
+                if d <= 1.1 {
+                    img[(x, y)] = Rgba([0, 0, 255, 255]);
+                }
+            }
+        }
 
-    // Now for all the pixels in the bounding box, colour those within the line
+        // Get a point five line pixels back
+        // <https://math.stackexchange.com/a/1630886>
+        let t: f64 = 5.0 / (dx * dx + dy * dy).sqrt();
+        ((1.0 - t) * x2 + t * x1, (1.0 - t) * y2 + t * y1)
+    };
+
+    // Now compute the three points of the arrow head
+    // <https://stackoverflow.com/a/47079770>
+    let (dx, dy): (f64, f64) = (x2 - x1, y2 - y1);
+    let norm: f64 = (dx * dx + dy * dy).sqrt();
+    let (udx, udy): (f64, f64) = (dx / norm, dy / norm);
+    let ax: f64 = udx * 3.0_f64.sqrt() / 2.0 - udy * 0.5;
+    let ay: f64 = udx * 0.5 + udy * 3.0_f64.sqrt() / 2.0;
+    let bx: f64 = udx * 3.0_f64.sqrt() / 2.0 + udy * 0.5;
+    let by: f64 = -udx * 0.5 + udy * 3.0_f64.sqrt() / 2.0;
+    let (p1, p2, p3): ((f64, f64), (f64, f64), (f64, f64)) = ((x2, y2), (x2 - 10.0 * ax, y2 - 10.0 * ay), (x2 - 10.0 * bx, y2 - 10.0 * by));
+
+    // Fill it
+    // <https://www.geeksforgeeks.org/check-whether-a-given-point-lies-inside-a-triangle-or-not/>
+    let bb: ((u32, u32), (u32, u32)) = bb((img.width(), img.height()), [p1, p2, p3]);
+    let a: f64 = area(p1, p2, p3);
     for y in bb.0.1..=bb.1.1 {
         for x in bb.0.0..=bb.1.0 {
-            let d: f64 = (a * x as f64 + b * y as f64 + c).abs() / ab2;
-
-            // Color the pixel if it's within the line
-            if d <= 1.0 {
-                img[(x, y)] = Rgba([255, 0, 0, 255]);
+            let a1: f64 = area((x as f64, y as f64), p2, p3);
+            let a2: f64 = area(p1, (x as f64, y as f64), p3);
+            let a3: f64 = area(p1, p2, (x as f64, y as f64));
+            if (a - (a1 + a2 + a3)).abs() <= 0.5 {
+                img[(x, y)] = Rgba([0, 0, 255, 255]);
             }
         }
     }

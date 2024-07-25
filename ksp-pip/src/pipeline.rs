@@ -4,7 +4,7 @@
 //  Created:
 //    25 Jul 2024, 01:05:15
 //  Last edited:
-//    25 Jul 2024, 01:09:50
+//    25 Jul 2024, 20:20:58
 //  Auto updated?
 //    Yes
 //
@@ -12,7 +12,8 @@
 //!   Implements the main [`Pipeline`] data structure.
 //
 
-use ksp_alg::Algorithm;
+use ksp_alg::ksp::Ksp;
+use ksp_alg::trans::Transformer;
 use serde::{Deserialize, Serialize};
 
 
@@ -41,7 +42,7 @@ pub enum PipelineStep {
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct PipelineStepKSP {
     /// The algorithm to execute.
-    pub alg: Algorithm,
+    pub alg: Ksp,
 }
 
 
@@ -52,3 +53,9 @@ pub struct PipelineStepTransform {
     /// The the transformer to apply.
     pub trans: Transformer,
 }
+
+
+
+/// Defines a step in a [`Pipeline`] that visualizes the current graph.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct PipelineStepVisualize;

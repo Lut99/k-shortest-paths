@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:10:52
 //  Last edited:
-//    25 Jul 2024, 01:13:51
+//    25 Jul 2024, 22:06:30
 //  Auto updated?
 //    Yes
 //
@@ -35,12 +35,10 @@ mod tests {
         // Run it quite some times to catch hashmap problems
         for _ in 0..10 {
             let g: Graph = load_graph("cities");
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Amsterdam", "Chicago", 1), vec![
-                path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")
-            ]);
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "Berlin", "Chicago", 1), vec![
+            assert_eq!(Wikipedia::k_shortest(&g, "Amsterdam", "Berlin", 1), vec![path!(crate : g, "Amsterdam" -| "Berlin")]);
+            assert_eq!(Wikipedia::k_shortest(&g, "Amsterdam", "Dorchester", 1), vec![path!(crate : g, "Amsterdam" -| "Dorchester")]);
+            assert_eq!(Wikipedia::k_shortest(&g, "Amsterdam", "Chicago", 1), vec![path!(crate : g, "Amsterdam" -> "Dorchester" -| "Chicago")]);
+            assert_eq!(Wikipedia::k_shortest(&g, "Berlin", "Chicago", 1), vec![
                 path!(crate : g, "Berlin" -> "Amsterdam" -> "Dorchester" -| "Chicago")
             ]);
         }
@@ -51,7 +49,7 @@ mod tests {
         // Run some more difficult ones
         for _ in 0..10 {
             let g: Graph = load_bench("india35");
-            assert_eq!(WikipediaKSP.k_shortest_paths(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
+            assert_eq!(Wikipedia::k_shortest(&g, "12", "33", 1), vec![path!(crate : g, "12" -| "33")]);
         }
     }
 }
@@ -65,10 +63,10 @@ mod tests {
 ///
 /// Based on: <https://en.wikipedia.org/wiki/K_shortest_path_routing#Algorithm>
 #[derive(Clone, Copy, Debug)]
-pub struct WikipediaKSP;
-impl MultiRouting for WikipediaKSP {
+pub struct Wikipedia;
+impl MultiRouting for Wikipedia {
     #[track_caller]
-    fn k_shortest_paths<'g>(&mut self, graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
+    fn k_shortest<'g>(graph: &'g Graph, src: &str, dst: &str, k: usize) -> Vec<Path<'g>> {
         // Assert that both nodes exists
         let src: &'g str = if let Some((key, _)) = graph.nodes.get_key_value(&ArrayString::from(src).unwrap()) {
             key
@@ -109,8 +107,8 @@ impl MultiRouting for WikipediaKSP {
                     // > - let p_v be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path p_u
                     let neighbour: &str = if e.left.as_str() == end && e.right.as_str() != end {
                         e.right.as_str()
-                    } else if e.left.as_str() != end && e.right.as_str() == end {
-                        e.left.as_str()
+                    // } else if e.left.as_str() != end && e.right.as_str() == end {
+                    //     e.left.as_str()
                     } else {
                         continue;
                     };

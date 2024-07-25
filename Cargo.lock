@@ -661,6 +661,8 @@ dependencies = [
  "arrayvec",
  "error-trace",
  "ksp-graph",
+ "log",
+ "paste",
  "serde",
 ]
 

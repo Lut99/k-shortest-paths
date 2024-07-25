@@ -4,7 +4,7 @@
 //  Created:
 //    19 Jul 2024, 23:35:02
 //  Last edited:
-//    25 Jul 2024, 00:34:30
+//    25 Jul 2024, 22:09:36
 //  Auto updated?
 //    Yes
 //
@@ -25,8 +25,6 @@ use std::fmt::{Display, Formatter, Result as FResult};
 use std::str::FromStr;
 
 use arrayvec::ArrayString;
-#[cfg(feature = "json")]
-use serde::{Deserialize, Serialize};
 
 
 /***** ERRORS *****/
@@ -94,7 +92,6 @@ impl FromStr for GraphFormat {
 /***** LIBRARY *****/
 /// Defines a graph of nodes linked by edges.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "json", derive(Deserialize, Serialize))]
 pub struct Graph {
     /// The nodes in the graph.
     pub nodes: HashMap<ArrayString<64>, Node>,
@@ -106,7 +103,6 @@ pub struct Graph {
 
 /// Defines a node in each graph.
 #[derive(Clone, Copy, Debug)]
-#[cfg_attr(feature = "json", derive(Deserialize, Serialize))]
 pub struct Node {
     /// The identifier of the node.
     pub id:  ArrayString<64>,
@@ -116,7 +112,6 @@ pub struct Node {
 
 /// Defines a link between nodes in each graph.
 #[derive(Clone, Copy, Debug)]
-#[cfg_attr(feature = "json", derive(Deserialize, Serialize))]
 pub struct Edge {
     /// The identifier of the edge.
     pub id:    ArrayString<64>,
