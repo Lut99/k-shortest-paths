@@ -4,7 +4,7 @@
 //  Created:
 //    25 Jul 2024, 01:05:15
 //  Last edited:
-//    26 Jul 2024, 01:47:57
+//    26 Jul 2024, 02:22:15
 //  Auto updated?
 //    Yes
 //
@@ -15,9 +15,11 @@
 use std::collections::HashMap;
 use std::error;
 use std::fmt::{Display, Formatter, Result as FResult};
+use std::path::PathBuf;
+use std::process::{Command, ExitStatus, Output};
 
 use arrayvec::ArrayString;
-use image::RgbaImage;
+use image::{ImageFormat, RgbaImage};
 use ksp_alg::dist::dijkstra::Dijkstra as DijkstraDist;
 use ksp_alg::dist::{Distance, Distancing};
 use ksp_alg::ksp::Ksp;
@@ -31,27 +33,42 @@ use ksp_alg::{MultiRouting, OwnedPath};
 use ksp_graph::Graph;
 use ksp_vis::render::Options;
 use serde::{Deserialize, Serialize};
-use show_image::{create_window, event, WindowProxy};
 
 
 /***** ERRORS *****/
 /// Defines the errors occurring when running [`Pipeline`]s.
 #[derive(Debug)]
 pub enum Error {
-    /// Failed to create window for showing the current graph.
-    WindowCreate { err: show_image::error::CreateWindowError },
-    /// Failed to set the image in the window for showing the current graph.
-    WindowSetImage { dims: (u32, u32), err: show_image::error::SetImageError },
-    /// Failed to wait for the image window to be closed.
-    WindowWait { err: show_image::error::InvalidWindowId },
+    /// Failed to save an image to disk.
+    ImageSave { path: PathBuf, fmt: ImageFormat, err: image::error::ImageError },
+    /// The subprocess was launched but failed on its own accord.
+    SubprocessFailed { cmd: Command, status: ExitStatus, stdout: Vec<u8>, stderr: Vec<u8> },
+    /// Failed to launch a subprocess.
+    SubprocessSpawn { cmd: Command, err: std::io::Error },
+    /// We're running on an unknown OS
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    UnknownOs,
 }
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use Error::*;
         match self {
-            WindowCreate { .. } => write!(f, "Failed to create graph visualization window"),
-            WindowSetImage { dims, .. } => write!(f, "Failed to set image of {}x{} in graph visualization window", dims.0, dims.1),
-            WindowWait { .. } => write!(f, "Failed to wait for graph visualization window to close"),
+            ImageSave { path, fmt, .. } => write!(f, "Failed to save image to '{}' as {:?}", path.display(), fmt),
+            SubprocessFailed { cmd, status, stdout, stderr } => write!(
+                f,
+                "Subprocess {:?} failed with exit status {:?}\n\nstdout:\n{}\n{}\n{}\n\nstderr:\n{}\n{}\n{}\n",
+                cmd,
+                status,
+                (0..80).map(|_| '-').collect::<String>(),
+                String::from_utf8_lossy(stdout),
+                (0..80).map(|_| '-').collect::<String>(),
+                (0..80).map(|_| '-').collect::<String>(),
+                String::from_utf8_lossy(stderr),
+                (0..80).map(|_| '-').collect::<String>()
+            ),
+            SubprocessSpawn { cmd, .. } => write!(f, "Failed to span process with {cmd:?}"),
+            #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+            UnknownOs => write!(f, "You are running on an unknown OS. This application does not know how to show you images in that case."),
         }
     }
 }
@@ -59,11 +76,62 @@ impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         use Error::*;
         match self {
-            WindowCreate { err } => Some(err),
-            WindowSetImage { err, .. } => Some(err),
-            WindowWait { err } => Some(err),
+            ImageSave { err, .. } => Some(err),
+            SubprocessFailed { .. } => None,
+            SubprocessSpawn { err, .. } => Some(err),
+            #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+            UnknownOs => None,
         }
     }
+}
+
+
+
+
+
+/***** HELPER FUNCTIONS *****/
+/// Shows the user an image and blocks until the user stops doing so.
+///
+/// # Arguments
+/// - `image`: The image to show.
+///
+/// # Errors
+/// This function may error if we failed to save the image to a temporary location on-disk or if
+/// the OS' file opener failed.
+fn show_image(mut img: RgbaImage) -> Result<(), Error> {
+    // Flip da image
+    image::imageops::flip_vertical_in_place(&mut img);
+
+    // Write the image to the tempdir
+    let img_path: PathBuf = std::env::temp_dir().join("graph.png");
+    if let Err(err) = img.save_with_format(&img_path, ImageFormat::Png) {
+        return Err(Error::ImageSave { path: img_path, fmt: ImageFormat::Png, err });
+    }
+
+    // Open in different ways
+    #[cfg(target_os = "windows")]
+    let mut cmd: Command = Command::new("open");
+    #[cfg(target_os = "macos")]
+    let mut cmd: Command = Command::new("open");
+    #[cfg(target_os = "linux")]
+    let mut cmd: Command = Command::new("xdg-open");
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    return Err(Error::UnknownOs);
+
+    // Append the file to open
+    cmd.arg(&img_path);
+
+    // Execute it
+    let out: Output = match cmd.output() {
+        Ok(out) => out,
+        Err(err) => return Err(Error::SubprocessSpawn { cmd, err }),
+    };
+    if !out.status.success() {
+        return Err(Error::SubprocessFailed { cmd, status: out.status, stdout: out.stdout, stderr: out.stderr });
+    }
+
+    // OK, done
+    Ok(())
 }
 
 
@@ -135,26 +203,8 @@ impl Pipeline {
 
                 // Visualize
                 PipelineStep::Visualize(PipelineStepVisualize { labels: NodeLabels::Identifiers }) => {
-                    // Render the graph and continue
-                    let mut img: RgbaImage = ksp_vis::render::render_graph(&graph, Options::default());
-                    image::imageops::flip_vertical_in_place(&mut img);
-                    let window: WindowProxy = match create_window("Graph", Default::default()) {
-                        Ok(window) => window,
-                        Err(err) => return Err(Error::WindowCreate { err }),
-                    };
-                    let dims: (u32, u32) = (img.width(), img.height());
-                    if let Err(err) = window.set_image("Graph", img) {
-                        return Err(Error::WindowSetImage { dims, err });
-                    }
-                    for event in window.event_channel().map_err(|err| Error::WindowWait { err })? {
-                        if let event::WindowEvent::KeyboardInput(event) = event {
-                            if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
-                                break;
-                            }
-                        } else if let event::WindowEvent::CloseRequested(_) = event {
-                            break;
-                        }
-                    }
+                    // Render the graph, show it, and continue when their image is closed
+                    show_image(ksp_vis::render::render_graph(&graph, Options::default()))?;
                 },
                 PipelineStep::Visualize(PipelineStepVisualize {
                     labels: NodeLabels::Distance(NodeLabelsDistance { dist: Distance::Dijkstra, node }),
@@ -162,34 +212,12 @@ impl Pipeline {
                     // Compute the graph colouring first
                     let dist: HashMap<&str, f64> = DijkstraDist::shortest_all(&graph, node);
 
-                    // Render the graph and continue
-                    let mut img: RgbaImage = ksp_vis::render::render_graph_with_labels(
+                    // Render the graph, show it, and continue when their image is closed
+                    show_image(ksp_vis::render::render_graph_with_labels(
                         &graph,
                         &dist.into_iter().map(|(id, dist)| (id, dist.to_string())).collect(),
                         Options::default(),
-                    );
-                    image::imageops::flip_vertical_in_place(&mut img);
-                    let window: WindowProxy = match create_window("Graph", Default::default()) {
-                        Ok(window) => window,
-                        Err(err) => return Err(Error::WindowCreate { err }),
-                    };
-                    let dims: (u32, u32) = (img.width(), img.height());
-                    if let Err(err) = window.set_image("Graph", img) {
-                        return Err(Error::WindowSetImage { dims, err });
-                    }
-                    for event in window.event_channel().map_err(|err| Error::WindowWait { err })? {
-                        if let event::WindowEvent::KeyboardInput(event) = event {
-                            if event.input.key_code == Some(event::VirtualKeyCode::Escape) && event.input.state.is_pressed() {
-                                break;
-                            }
-                        } else if let event::WindowEvent::CloseRequested(_) = event {
-                            break;
-                        }
-                    }
-                    // if let Err(err) = window.wait_until_destroyed() {
-                    //     return Err(Error::WindowWait { err });
-                    // }
-                    println!("HOWDY");
+                    ))?;
                 },
 
                 // K-Shortest paths

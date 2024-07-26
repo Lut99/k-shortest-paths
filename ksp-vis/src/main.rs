@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 01:44:40
 //  Last edited:
-//    20 Jul 2024, 00:11:15
+//    26 Jul 2024, 02:22:42
 //  Auto updated?
 //    Yes
 //
@@ -104,19 +104,14 @@ fn main() {
 
     // Render
     debug!("Rendering graph...");
-    let img: RgbaImage = render_graph(&g, Options::default());
-    let mut flipped: RgbaImage = img.clone();
-    for y in 0..img.height() {
-        for x in 0..img.width() {
-            flipped[(x, img.height() - 1 - y)] = img[(x, y)];
-        }
-    }
+    let mut img: RgbaImage = render_graph(&g, Options::default());
+    image::imageops::flip_vertical_in_place(&mut img);
 
     // Write the image
     debug!("Writing rendered image to '{}'...", args.output.display());
     match File::create(&args.output) {
         Ok(mut handle) => {
-            if let Err(err) = flipped.write_to(&mut handle, ImageFormat::Png) {
+            if let Err(err) = img.write_to(&mut handle, ImageFormat::Png) {
                 error!("{}", trace!(("Failed to write to output image '{}'", args.output.display()), err));
                 std::process::exit(1);
             }

@@ -4,7 +4,7 @@
 //  Created:
 //    16 Jul 2024, 00:09:40
 //  Last edited:
-//    26 Jul 2024, 01:36:26
+//    26 Jul 2024, 02:25:19
 //  Auto updated?
 //    Yes
 //
@@ -18,6 +18,7 @@ use std::fs::{self, DirEntry, File, ReadDir};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use arrayvec::ArrayString;
 use clap::Parser;
 use comfy_table::Table;
 use error_trace::trace;
@@ -52,6 +53,9 @@ struct Arguments {
                 optional."
     )]
     benchmark: Vec<String>,
+    /// Any specific tests to run.
+    #[clap(short, long, help = "If given, runs only the given tests in each benchmark file.")]
+    test: Vec<ArrayString<64>>,
     /// Where to find the benchmarks.
     #[clap(short = 'd', long, default_value = "./benchmarks", help = "The directory where the benchmark XML files are read from.")]
     benchmark_dir: PathBuf,
@@ -66,7 +70,6 @@ struct Arguments {
 
 
 /***** ENTRYPOINT *****/
-#[show_image::main]
 fn main() {
     // Parse arguments
     let args = Arguments::parse();
@@ -197,7 +200,12 @@ fn main() {
             },
         };
         let tests: Vec<TestCase> = match crate::parser::parse_tests(&file) {
-            Ok(res) => res,
+            Ok(mut res) => {
+                if !args.test.is_empty() {
+                    res.retain(|test| args.test.contains(&test.id));
+                }
+                res
+            },
             Err(err) => {
                 error!("{}", trace!(("Failed to load benchmark '{name}'"), err));
                 std::process::exit(1);
